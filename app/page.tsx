@@ -139,7 +139,9 @@ function UsageBar({
                 : "text-zinc-500"
           }
         >
-          {!dimmed && increased && <span className="text-emerald-600">▲ </span>}
+          {!dimmed && increased && (
+            <span className="text-emerald-600 arrow-pop">▲ </span>
+          )}
           {w.percent}%
         </span>
       </div>
@@ -167,6 +169,7 @@ export default function Home() {
   }, []);
 
   const lastChange = useRef<Map<string, ChangeInfo>>(new Map());
+  const increaseAt = useRef<Map<string, number>>(new Map());
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -175,6 +178,7 @@ export default function Home() {
       const json = await res.json();
       const accounts: AccountRow[] = json.accounts ?? [];
       const seen = new Set<string>();
+      const ts = Date.now();
       for (const row of accounts) {
         seen.add(row.email);
         if (row.lastChangeAt) {
@@ -184,6 +188,18 @@ export default function Home() {
               at: row.lastChangeAt,
               detail: row.lastChangeDetail ?? "",
             });
+          }
+        }
+        if (row.usage && row.prev) {
+          for (const win of ["rolling", "weekly", "monthly"] as const) {
+            const key = `${row.email}:${win}`;
+            const cur = row.usage[win];
+            const prev = row.prev[win];
+            if (!isExhaustedWindow(cur) && cur.percent > prev.percent) {
+              if (!increaseAt.current.has(key)) increaseAt.current.set(key, ts);
+            } else {
+              increaseAt.current.delete(key);
+            }
           }
         }
       }
@@ -295,8 +311,10 @@ const copyKey = async (email: string) => {
               : isInUse
                 ? "bg-white border border-emerald-400 rounded-xl p-4 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
                 : "bg-white border border-zinc-200 rounded-xl p-4 shadow-sm";
-            const increased = (w: UsageWindow, prev: UsageWindow | null) =>
-              !!prev && !isExhaustedWindow(w) && w.percent > prev.percent;
+            const showInc = (win: string) => {
+              const at = increaseAt.current.get(`${row.email}:${win}`);
+              return !!at && Date.now() - at < 20000;
+            };
             return (
               <div key={row.email} className={cardClass}>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -332,7 +350,7 @@ const copyKey = async (email: string) => {
                     <UsageBar
                       label="Rolling"
                       w={row.usage.rolling}
-                      increased={increased(row.usage.rolling, row.prev?.rolling ?? null)}
+                      increased={showInc("rolling")}
                       dimmed={
                         isExhaustedWindow(row.usage.weekly) ||
                         isExhaustedWindow(row.usage.monthly)
@@ -341,13 +359,13 @@ const copyKey = async (email: string) => {
                     <UsageBar
                       label="Weekly"
                       w={row.usage.weekly}
-                      increased={increased(row.usage.weekly, row.prev?.weekly ?? null)}
+                      increased={showInc("weekly")}
                       dimmed={isExhaustedWindow(row.usage.monthly)}
                     />
                     <UsageBar
                       label="Monthly"
                       w={row.usage.monthly}
-                      increased={increased(row.usage.monthly, row.prev?.monthly ?? null)}
+                      increased={showInc("monthly")}
                       dimmed={false}
                     />
                   </div>
