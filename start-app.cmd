@@ -8,7 +8,7 @@ if not exist ".next\BUILD_ID" (
 )
 
 echo Starting OpenCode App server...
-start "OpenCode App server" /min cmd /c "npm run start"
+powershell -NoProfile -WindowStyle Hidden -Command "Start-Process -FilePath cmd -ArgumentList '/c npm run start' -WindowStyle Hidden"
 
 set /a attempts=0
 :wait
