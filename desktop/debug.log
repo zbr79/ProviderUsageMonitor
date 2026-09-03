@@ -1,0 +1,7 @@
+
+> opencode-widget@1.0.0 start
+> electron . --remote-debugging-port=9222
+
+
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/14810929-0b93-487c-a047-94d22e525fe7

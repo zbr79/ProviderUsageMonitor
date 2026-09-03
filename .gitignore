@@ -42,3 +42,6 @@ next-env.d.ts
 
 # secrets
 /data/accounts.json
+
+# desktop widget
+/desktop/node_modules/

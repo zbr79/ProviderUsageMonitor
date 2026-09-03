@@ -238,7 +238,7 @@ const copyKey = async (email: string) => {
   };
 
   return (
-    <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8">
+    <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 bg-[#f4f4f5]">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="text-2xl font-bold whitespace-nowrap">OpenCode API</h1>
