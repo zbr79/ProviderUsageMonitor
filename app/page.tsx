@@ -17,7 +17,10 @@ interface Usage {
 interface AccountRow {
   email: string;
   usage: Usage | null;
+  prev: Usage | null;
   error: string | null;
+  lastChangeAt: number | null;
+  lastChangeDetail: string | null;
 }
 
 interface ChangeInfo {
@@ -25,7 +28,7 @@ interface ChangeInfo {
   detail: string;
 }
 
-const POLL_MS = 5000;
+const POLL_MS = 10 * 60 * 1000;
 const IN_USE_WINDOW_MS = 15 * 60 * 1000;
 
 export const dynamic = "force-dynamic";
@@ -42,32 +45,6 @@ function resetsIn(resetsAt: string): string {
   const m = Math.floor((ms % 3600000) / 60000);
   if (h >= 24) return `resets in ${Math.floor(h / 24)}d ${h % 24}h`;
   return `resets in ${h}h ${m}m`;
-}
-
-function usageKey(u: Usage): string {
-  return `${u.rolling.percent}|${u.weekly.percent}|${u.monthly.percent}`;
-}
-
-function diffText(prev: Usage, cur: Usage): string {
-  const parts: string[] = [];
-  const windows: [string, UsageWindow, UsageWindow][] = [
-    ["rolling", prev.rolling, cur.rolling],
-    ["weekly", prev.weekly, cur.weekly],
-    ["monthly", prev.monthly, cur.monthly],
-  ];
-  for (const [name, p, c] of windows) {
-    if (p.percent !== c.percent) parts.push(`${name} ${p.percent}% → ${c.percent}%`);
-  }
-  return parts.join(", ");
-}
-
-function agoText(ms: number): string {
-  if (ms < 60_000) return "just now";
-  const m = Math.floor(ms / 60_000);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ${m % 60}m ago`;
-  return `${Math.floor(h / 24)}d ago`;
 }
 
 function isExhaustedWindow(w: UsageWindow): boolean {
@@ -90,18 +67,39 @@ function earliestReset(r: AccountRow): number {
   return times.length ? Math.min(...times) : 0;
 }
 
-function UsageBar({ label, w }: { label: string; w: UsageWindow }) {
+function UsageBar({
+  label,
+  w,
+  increased,
+  dimmed,
+}: {
+  label: string;
+  w: UsageWindow;
+  increased: boolean;
+  dimmed: boolean;
+}) {
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
         <span className="font-medium text-zinc-600">{label}</span>
-        <span className={w.percent >= 80 ? "text-amber-600" : "text-zinc-500"}>
+        <span
+          className={
+            dimmed
+              ? "text-zinc-400"
+              : w.percent >= 80
+                ? "text-amber-600"
+                : "text-zinc-500"
+          }
+        >
+          {!dimmed && increased && <span className="text-emerald-600">▲ </span>}
           {w.percent}%
         </span>
       </div>
       <div className="h-2 rounded-full bg-zinc-200 overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${windowColor(w)}`}
+          className={`h-full rounded-full transition-all duration-500 ${
+            dimmed ? "bg-zinc-400" : windowColor(w)
+          }`}
           style={{ width: `${Math.min(w.percent, 100)}%` }}
         />
       </div>
@@ -113,40 +111,37 @@ function UsageBar({ label, w }: { label: string; w: UsageWindow }) {
 export default function Home() {
   const [rows, setRows] = useState<AccountRow[] | null>(null);
   const [status, setStatus] = useState("");
-  const [latestChange, setLatestChange] = useState<ChangeInfo & { email: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const prevUsage = useRef<Map<string, Usage>>(new Map());
   const lastChange = useRef<Map<string, ChangeInfo>>(new Map());
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     try {
       const res = await fetch("/api/usage", { cache: "no-store" });
       const json = await res.json();
       const accounts: AccountRow[] = json.accounts ?? [];
-      const now = Date.now();
       const seen = new Set<string>();
-      let newest: (ChangeInfo & { email: string }) | null = null;
       for (const row of accounts) {
         seen.add(row.email);
-        if (!row.usage) continue;
-        const prev = prevUsage.current.get(row.email);
-        if (prev && usageKey(prev) !== usageKey(row.usage)) {
-          const info: ChangeInfo = { at: now, detail: diffText(prev, row.usage) };
-          lastChange.current.set(row.email, info);
-          if (!newest || info.at > newest.at) newest = { email: row.email, ...info };
-        }
-        prevUsage.current.set(row.email, row.usage);
-      }
-      for (const email of [...prevUsage.current.keys()]) {
-        if (!seen.has(email)) {
-          prevUsage.current.delete(email);
-          lastChange.current.delete(email);
+        if (row.lastChangeAt) {
+          const prev = lastChange.current.get(row.email);
+          if (!prev || row.lastChangeAt >= prev.at) {
+            lastChange.current.set(row.email, {
+              at: row.lastChangeAt,
+              detail: row.lastChangeDetail ?? "",
+            });
+          }
         }
       }
-      if (newest) setLatestChange(newest);
+      for (const email of [...lastChange.current.keys()]) {
+        if (!seen.has(email)) lastChange.current.delete(email);
+      }
       setRows(accounts);
     } catch {
       setStatus("Failed to load usage");
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -191,14 +186,14 @@ export default function Home() {
     <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold">OpenCode Go Accounts</h1>
+        <button
+          onClick={load}
+          disabled={refreshing}
+          className="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white disabled:opacity-50"
+        >
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
-
-      {inUseEmail && latestChange && (
-        <div className="mb-4 text-sm bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-2">
-          In use: <span className="font-semibold">{inUseEmail}</span> —{" "}
-          {latestChange.detail} ({agoText(Date.now() - latestChange.at)})
-        </div>
-      )}
 
       {status && (
         <div className="mb-4 text-sm bg-white border border-zinc-200 rounded-lg px-3 py-2">
@@ -211,7 +206,7 @@ export default function Home() {
           <div className="text-zinc-500">Loading…</div>
         ) : sortedRows.length === 0 ? (
           <div className="text-zinc-500">
-            No accounts yet. Add one below (or edit <code>data/accounts.json</code>).
+            No accounts yet. Add them in <code>data/accounts.json</code>.
           </div>
         ) : (
           sortedRows.map((row) => {
@@ -221,16 +216,13 @@ export default function Home() {
               : isInUse
                 ? "bg-white border border-emerald-400 rounded-xl p-4 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
                 : "bg-white border border-zinc-200 rounded-xl p-4 shadow-sm";
+            const increased = (w: UsageWindow, prev: UsageWindow | null) =>
+              !!prev && !isExhaustedWindow(w) && w.percent > prev.percent;
             return (
-              <div
-                key={row.email}
-                className={cardClass}
-              >
+              <div key={row.email} className={cardClass}>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold truncate">{row.email}</span>
-                    </div>
+                    <span className="font-semibold truncate">{row.email}</span>
                   </div>
                   <button
                     onClick={() => copyKey(row.email)}
@@ -258,9 +250,27 @@ export default function Home() {
                   </div>
                 ) : row.usage ? (
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <UsageBar label="Rolling" w={row.usage.rolling} />
-                    <UsageBar label="Weekly" w={row.usage.weekly} />
-                    <UsageBar label="Monthly" w={row.usage.monthly} />
+                    <UsageBar
+                      label="Rolling"
+                      w={row.usage.rolling}
+                      increased={increased(row.usage.rolling, row.prev?.rolling ?? null)}
+                      dimmed={
+                        isExhaustedWindow(row.usage.weekly) ||
+                        isExhaustedWindow(row.usage.monthly)
+                      }
+                    />
+                    <UsageBar
+                      label="Weekly"
+                      w={row.usage.weekly}
+                      increased={increased(row.usage.weekly, row.prev?.weekly ?? null)}
+                      dimmed={isExhaustedWindow(row.usage.monthly)}
+                    />
+                    <UsageBar
+                      label="Monthly"
+                      w={row.usage.monthly}
+                      increased={increased(row.usage.monthly, row.prev?.monthly ?? null)}
+                      dimmed={false}
+                    />
                   </div>
                 ) : null}
               </div>
