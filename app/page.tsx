@@ -51,6 +51,55 @@ function isExhaustedWindow(w: UsageWindow): boolean {
   return w.percent >= 100 || w.status === "exhausted";
 }
 
+interface PeakInfo {
+  active: boolean;
+  endAt: number | null;
+  nextStartAt: number | null;
+}
+
+function utcOf(d: Date, hour: number): number {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hour, 0, 0);
+}
+
+function getPeakInfo(now: Date): PeakInfo {
+  const h = now.getUTCHours();
+  const day = now.getUTCDay();
+  const isWeekday = day >= 1 && day <= 5;
+
+  if (isWeekday) {
+    if (h >= 1 && h < 4) return { active: true, endAt: utcOf(now, 4), nextStartAt: null };
+    if (h >= 6 && h < 10) return { active: true, endAt: utcOf(now, 10), nextStartAt: null };
+  }
+
+  const candidates: number[] = [];
+  if (isWeekday) {
+    if (h < 1) candidates.push(utcOf(now, 1));
+    if (h >= 4 && h < 6) candidates.push(utcOf(now, 6));
+  }
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(now.getTime() + i * 86400000);
+    if (d.getUTCDay() >= 1 && d.getUTCDay() <= 5) {
+      candidates.push(utcOf(d, 1));
+      break;
+    }
+  }
+  const next = candidates
+    .filter((c) => c > now.getTime())
+    .sort((a, b) => a - b)[0] ?? null;
+  return { active: false, endAt: null, nextStartAt: next };
+}
+
+function fmtDuration(ms: number): string {
+  if (ms <= 0) return "0s";
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m ${sec}s`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
 function isExhausted(r: AccountRow): boolean {
   return (
     !!r.usage &&
@@ -112,6 +161,18 @@ export default function Home() {
   const [rows, setRows] = useState<AccountRow[] | null>(null);
   const [status, setStatus] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const lastChange = useRef<Map<string, ChangeInfo>>(new Map());
 
@@ -139,7 +200,7 @@ export default function Home() {
       }
       setRows(accounts);
     } catch {
-      setStatus("Failed to load usage");
+      setToast("Failed to load usage");
     } finally {
       setRefreshing(false);
     }
@@ -171,6 +232,8 @@ export default function Home() {
     return top.email;
   }, [sortedRows]);
 
+  const peakInfo = useMemo(() => getPeakInfo(new Date(now)), [now]);
+
   const copyKey = async (email: string) => {
     try {
       const res = await fetch(`/api/key?email=${encodeURIComponent(email)}`);
@@ -178,7 +241,7 @@ export default function Home() {
       await navigator.clipboard.writeText(json.key);
       setStatus("Key copied to clipboard");
     } catch {
-      setStatus("Copy failed");
+      setToast("Copy failed");
     }
   };
 
@@ -195,9 +258,30 @@ export default function Home() {
         </button>
       </div>
 
+      {peakInfo.active && peakInfo.endAt ? (
+        <div className="mb-4 text-sm bg-red-50 border border-red-300 text-red-700 rounded-lg px-3 py-2">
+          DeepSeek V4 peak pricing is active — ends in{" "}
+          <span className="font-semibold">{fmtDuration(peakInfo.endAt - now)}</span>
+        </div>
+      ) : peakInfo.nextStartAt ? (
+        <div className="mb-4 text-sm bg-zinc-50 border border-zinc-200 text-zinc-500 rounded-lg px-3 py-2">
+          DeepSeek V4 off-peak pricing — next peak starts in{" "}
+          <span className="font-semibold">{fmtDuration(peakInfo.nextStartAt - now)}</span>
+        </div>
+      ) : null}
+
       {status && (
         <div className="mb-4 text-sm bg-white border border-zinc-200 rounded-lg px-3 py-2">
           {status}
+        </div>
+      )}
+
+      {toast && (
+        <div
+          className="fixed top-4 right-4 bg-zinc-900 text-zinc-100 px-4 py-2 rounded-lg shadow-lg z-50"
+          onClick={() => setToast(null)}
+        >
+          {toast}
         </div>
       )}
 
