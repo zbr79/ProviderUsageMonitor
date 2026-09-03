@@ -45,3 +45,5 @@ next-env.d.ts
 
 # desktop widget
 /desktop/node_modules/
+
+/desktop/*.log
