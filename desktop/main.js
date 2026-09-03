@@ -1,11 +1,11 @@
-const { app, BrowserWindow, Menu, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, screen, desktopCapturer } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const APP_ROOT = path.resolve(__dirname, "..");
 const WIDGET_URL = "http://localhost:3000/widget";
-const WIDTH = 340;
+const WIDTH = 238;
 const CONFIG_PATH = path.join(app.getPath("userData"), "widget-config.json");
 
 let win = null;
@@ -102,6 +102,10 @@ function createWindow() {
 
   win.webContents.on("context-menu", () => {
     Menu.buildFromTemplate([
+      {
+        label: "Toggle Expand / Collapse",
+        click: () => win.webContents.send("widget-toggle-expand"),
+      },
       { label: "Refresh", click: () => win.reload() },
       { type: "separator" },
       { label: "Quit", click: () => app.quit() },
@@ -125,11 +129,39 @@ ipcMain.on("widget-resize", (_e, height) => {
   win.setSize(WIDTH, h);
 });
 
+function startBgSampler() {
+  setInterval(async () => {
+    if (!win || win.isDestroyed()) return;
+    try {
+      const display = screen.getPrimaryDisplay();
+      const sources = await desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width: 240, height: 135 },
+      });
+      const src = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
+      if (!src) return;
+      const size = src.thumbnail.getSize();
+      const buffer = src.thumbnail.toBitmap();
+      let sum = 0;
+      let count = 0;
+      for (let i = 0; i + 3 < buffer.length; i += 12) {
+        sum += buffer[i] + buffer[i + 1] + buffer[i + 2];
+        count += 3;
+      }
+      const avg = count ? sum / count / 255 : 0.5;
+      win.webContents.send("widget-bg", avg);
+    } catch {
+      // ignore sampling errors
+    }
+  }, 1000);
+}
+
 app.whenReady().then(async () => {
   startServer();
   const ok = await waitForServer();
   if (ok) {
     createWindow();
+    startBgSampler();
   } else {
     console.error("Server did not start in time");
     app.quit();

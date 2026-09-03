@@ -106,24 +106,30 @@ function MiniBar({
   w,
   dimmed,
   increased,
+  light,
 }: {
   label: string;
   w: UsageWindow;
   dimmed: boolean;
   increased: boolean;
+  light: boolean;
 }) {
   return (
-    <div className="flex-1 min-w-0">
+    <div className={`flex-1 min-w-0 transition-colors duration-700`}>
       <div className="flex justify-between text-[10px] leading-3 mb-0.5">
-        <span className="text-zinc-200">{label}</span>
-        <span className={dimmed ? "text-zinc-400" : "text-zinc-100"}>
-          {!dimmed && increased && <span className="text-emerald-300 arrow-pop">▲ </span>}
+        <span className={`transition-colors duration-700 ${light ? "text-zinc-600" : "text-zinc-200"}`}>{label}</span>
+        <span className={`transition-colors duration-700 ${dimmed ? "text-zinc-400" : light ? "text-zinc-800" : "text-zinc-100"}`}>
+          {!dimmed && increased && (
+            <span className={`arrow-pop transition-colors duration-700 ${light ? "text-emerald-600" : "text-emerald-300"}`}>
+              ▲{" "}
+            </span>
+          )}
           {w.percent}%
         </span>
       </div>
-      <div className="h-1 rounded-full bg-white/15 overflow-hidden">
+      <div className={`h-1 rounded-full overflow-hidden transition-colors duration-700 ${light ? "bg-zinc-300/70" : "bg-white/15"}`}>
         <div
-          className={`h-full rounded-full ${dimmed ? "bg-zinc-500" : windowColor(w)}`}
+          className={`h-full rounded-full ${dimmed ? "bg-zinc-400" : windowColor(w)}`}
           style={{ width: `${Math.min(w.percent, 100)}%` }}
         />
       </div>
@@ -136,8 +142,29 @@ export default function Widget() {
   const [now, setNow] = useState(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [bgBright, setBgBright] = useState<number | null>(null);
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    (window as any).widget?.onBg?.((v: number) => {
+      const bright = v >= 0.45;
+      const dark = v < 0.3;
+      const wouldBeLight = bgBright !== null && bgBright < 0.5;
+      const shouldSwitch =
+        (dark && !wouldBeLight) ||
+        (bright && wouldBeLight) ||
+        bgBright === null;
+      if (shouldSwitch) setBgBright(v);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bgBright]);
+
+  useEffect(() => {
+    (window as any).widget?.onToggleExpand?.(() => setExpanded((e) => !e));
+  }, []);
+
+  const light = bgBright !== null && bgBright < 0.5;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -201,14 +228,6 @@ export default function Widget() {
     });
   }, [rows]);
 
-  const inUseEmail = useMemo(() => {
-    const top = sortedRows?.[0];
-    if (!top) return null;
-    const info = lastChange.current.get(top.email);
-    if (!info || Date.now() - info.at > 15 * 60 * 1000) return null;
-    return top.email;
-  }, [sortedRows]);
-
   const activeRow = sortedRows?.[0] ?? null;
 
   const copyKey = async (email: string) => {
@@ -222,92 +241,8 @@ export default function Widget() {
     }
   };
 
-  const controls = (
-    <div className="ml-auto flex items-center gap-0.5" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        title={expanded ? "Collapse" : "Expand"}
-        className="p-1 rounded-md text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-      >
-        {expanded ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-3 w-3"
-          >
-            <path d="M4 14h6v6" />
-            <path d="M20 10h-6V4" />
-            <path d="M14 10l7-7" />
-            <path d="M10 14l-7 7" />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-3 w-3"
-          >
-            <path d="M15 3h6v6" />
-            <path d="M9 21H3v-6" />
-            <path d="M21 3l-7 7" />
-            <path d="M3 21l7-7" />
-          </svg>
-        )}
-      </button>
-      <button
-        onClick={load}
-        title="Refresh"
-        className="p-1 rounded-md text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
-        >
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-          <path d="M21 3v5h-5" />
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-          <path d="M8 16H3v5" />
-        </svg>
-      </button>
-      <button
-        onClick={() => (window as any).widget?.close()}
-        title="Close"
-        className="p-1 rounded-md text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-3 w-3"
-        >
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-      </button>
-    </div>
-  );
-
   const renderCard = (row: AccountRow, withControls: boolean) => {
-    const isInUse = row.email === inUseEmail;
+    const isInUse = sortedRows?.[0]?.email === row.email;
     const exhausted = isExhausted(row);
     const showInc = (win: string) => {
       const at = increaseAt.current.get(`${row.email}:${win}`);
@@ -316,12 +251,20 @@ export default function Widget() {
     return (
       <div
         key={row.email}
-        className={`rounded-lg p-2 ${
+        className={`rounded-lg p-2 transition-colors duration-700 ${
+          light ? "bg-zinc-200" : "bg-zinc-900"
+        } ${
           exhausted
-            ? "bg-red-500/5 border border-red-400/40"
+            ? light
+              ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+              : "border border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
             : isInUse
-              ? "bg-white/5 border border-emerald-400/40"
-              : "bg-white/5 border border-white/10"
+              ? light
+                ? "border border-emerald-500/80 shadow-[0_0_14px_rgba(16,185,129,0.45)]"
+                : "border border-emerald-400/70 shadow-[0_0_14px_rgba(16,185,129,0.45)]"
+              : light
+                ? "border border-zinc-400/50"
+                : "border border-white/15"
         }`}
       >
         <div
@@ -331,7 +274,11 @@ export default function Widget() {
           <button
             onClick={() => copyKey(row.email)}
             title="Copy key"
-            className="p-0.5 rounded text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors shrink-0"
+            className={`p-0.5 rounded transition-colors shrink-0 ${
+              light
+                ? "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70"
+                : "text-zinc-300 hover:text-zinc-100 hover:bg-white/10"
+            }`}
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <svg
@@ -348,44 +295,46 @@ export default function Widget() {
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
           </button>
-          <span className="text-[11px] text-zinc-100 truncate font-medium">
-            {row.email.slice(0, 7)}
+          <span className={`text-[11px] truncate font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
+            {row.email.slice(0, 4)}
           </span>
           {withControls && peakInfo.active && peakInfo.endAt ? (
-            <span className="text-[9px] font-medium text-red-300 whitespace-nowrap">
+            <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-red-600" : "text-red-300"}`}>
               Peak Ends in {fmtDuration(peakInfo.endAt - now)}
             </span>
           ) : withControls && peakInfo.nextStartAt ? (
-            <span className="text-[9px] font-medium text-emerald-300 whitespace-nowrap">
+            <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-emerald-600" : "text-emerald-300"}`}>
               Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
             </span>
           ) : null}
-          {withControls && controls}
         </div>
         {row.error ? (
           <div className="text-[10px] text-red-400">unavailable</div>
         ) : row.usage ? (
           <div className="flex gap-2">
             <MiniBar
-              label="Rolling"
+              label="R"
               w={row.usage.rolling}
               dimmed={
                 isExhaustedWindow(row.usage.weekly) ||
                 isExhaustedWindow(row.usage.monthly)
               }
               increased={showInc("rolling")}
+              light={light}
             />
             <MiniBar
-              label="Weekly"
+              label="W"
               w={row.usage.weekly}
               dimmed={isExhaustedWindow(row.usage.monthly)}
               increased={showInc("weekly")}
+              light={light}
             />
             <MiniBar
-              label="Monthly"
+              label="M"
               w={row.usage.monthly}
               dimmed={false}
               increased={showInc("monthly")}
+              light={light}
             />
           </div>
         ) : null}
@@ -398,25 +347,21 @@ export default function Widget() {
   return (
     <div className="w-screen p-1.5 select-none">
       <div
-      className={`flex flex-col rounded-xl bg-black/85 backdrop-blur-md border border-white/10 overflow-hidden ${
-        expanded ? "h-full" : ""
-      }`}
-    >
-        <div
-          className={
-            expanded
-              ? "flex-1 overflow-y-auto p-1.5 space-y-1.5"
-              : "p-1.5"
-          }
-        >
-          {activeRow === null ? (
-            <div className="text-[11px] text-zinc-400 px-1 py-2">Loading…</div>
-          ) : expanded ? (
-            sortedRows?.map((row, i) => renderCard(row, i === 0))
-          ) : (
-            renderCard(activeRow, true)
-          )}
-        </div>
+        className={
+          expanded
+            ? "space-y-1.5"
+            : ""
+        }
+      >
+        {activeRow === null ? (
+          <div className={`text-[11px] px-1 py-2 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+            Loading…
+          </div>
+        ) : expanded ? (
+          sortedRows?.map((row, i) => renderCard(row, i === 0))
+        ) : (
+          renderCard(activeRow, true)
+        )}
       </div>
     </div>
   );
