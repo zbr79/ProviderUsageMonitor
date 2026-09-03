@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toastError, toastSuccess } from "@/app/components/toast/toast";
 
 interface UsageWindow {
   status: string;
@@ -90,14 +91,12 @@ function getPeakInfo(now: Date): PeakInfo {
 }
 
 function fmtDuration(ms: number): string {
-  if (ms <= 0) return "0s";
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m ${sec}s`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
+  if (ms <= 0) return "0m";
+  const m = Math.floor(ms / 60000);
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h > 0) return `${h}h ${rem}m`;
+  return `${rem}m`;
 }
 
 function isExhausted(r: AccountRow): boolean {
@@ -159,20 +158,13 @@ function UsageBar({
 
 export default function Home() {
   const [rows, setRows] = useState<AccountRow[] | null>(null);
-  const [status, setStatus] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   const lastChange = useRef<Map<string, ChangeInfo>>(new Map());
 
@@ -200,7 +192,7 @@ export default function Home() {
       }
       setRows(accounts);
     } catch {
-      setToast("Failed to load usage");
+      toastError("Failed to load usage");
     } finally {
       setRefreshing(false);
     }
@@ -234,56 +226,59 @@ export default function Home() {
 
   const peakInfo = useMemo(() => getPeakInfo(new Date(now)), [now]);
 
-  const copyKey = async (email: string) => {
+const copyKey = async (email: string) => {
     try {
       const res = await fetch(`/api/key?email=${encodeURIComponent(email)}`);
       const json = await res.json();
       await navigator.clipboard.writeText(json.key);
-      setStatus("Key copied to clipboard");
+      toastSuccess("Key copied to clipboard");
     } catch {
-      setToast("Copy failed");
+      toastError("Copy failed");
     }
   };
 
   return (
     <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-bold">OpenCode Go Accounts</h1>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-2xl font-bold whitespace-nowrap">OpenCode API</h1>
+          {peakInfo.active && peakInfo.endAt ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-300 rounded-full px-2.5 py-0.5 whitespace-nowrap">
+              <span className="h-1 w-1 rounded-full bg-red-500" />
+              DeepSeek Peak Hour Ends in{" "}
+              <span className="font-semibold">{fmtDuration(peakInfo.endAt - now)}</span>
+            </span>
+          ) : peakInfo.nextStartAt ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-full px-2.5 py-0.5 whitespace-nowrap">
+              <span className="h-1 w-1 rounded-full bg-emerald-500" />
+              DeepSeek Peak Hour Starts in{" "}
+              <span className="font-semibold">{fmtDuration(peakInfo.nextStartAt - now)}</span>
+            </span>
+          ) : null}
+        </div>
         <button
           onClick={load}
           disabled={refreshing}
-          className="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white disabled:opacity-50"
+          title="Refresh"
+          className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors disabled:opacity-50"
         >
-          {refreshing ? "Refreshing…" : "Refresh"}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+          >
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
+          </svg>
         </button>
       </div>
-
-      {peakInfo.active && peakInfo.endAt ? (
-        <div className="mb-4 text-sm bg-red-50 border border-red-300 text-red-700 rounded-lg px-3 py-2">
-          DeepSeek V4 peak pricing is active — ends in{" "}
-          <span className="font-semibold">{fmtDuration(peakInfo.endAt - now)}</span>
-        </div>
-      ) : peakInfo.nextStartAt ? (
-        <div className="mb-4 text-sm bg-zinc-50 border border-zinc-200 text-zinc-500 rounded-lg px-3 py-2">
-          DeepSeek V4 off-peak pricing — next peak starts in{" "}
-          <span className="font-semibold">{fmtDuration(peakInfo.nextStartAt - now)}</span>
-        </div>
-      ) : null}
-
-      {status && (
-        <div className="mb-4 text-sm bg-white border border-zinc-200 rounded-lg px-3 py-2">
-          {status}
-        </div>
-      )}
-
-      {toast && (
-        <div
-          className="fixed top-4 right-4 bg-zinc-900 text-zinc-100 px-4 py-2 rounded-lg shadow-lg z-50"
-          onClick={() => setToast(null)}
-        >
-          {toast}
-        </div>
-      )}
 
       <div className="space-y-4">
         {sortedRows === null ? (
