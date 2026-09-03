@@ -18,6 +18,7 @@ interface Usage {
 interface AccountRow {
   email: string;
   usage: Usage | null;
+  prev: Usage | null;
   error: string | null;
   lastChangeAt: number | null;
   lastChangeDetail: string | null;
@@ -104,16 +105,19 @@ function MiniBar({
   label,
   w,
   dimmed,
+  increased,
 }: {
   label: string;
   w: UsageWindow;
   dimmed: boolean;
+  increased: boolean;
 }) {
   return (
     <div className="flex-1 min-w-0">
       <div className="flex justify-between text-[10px] leading-3 mb-0.5">
         <span className="text-zinc-300">{label}</span>
         <span className={dimmed ? "text-zinc-500" : "text-zinc-400"}>
+          {!dimmed && increased && <span className="text-emerald-300 arrow-pop">▲ </span>}
           {w.percent}%
         </span>
       </div>
@@ -133,6 +137,7 @@ export default function Widget() {
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
+  const increaseAt = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -140,7 +145,7 @@ export default function Widget() {
   }, []);
 
   useEffect(() => {
-    (window as any).widget?.resize(expanded ? 99999 : 150);
+    (window as any).widget?.resize(expanded ? 99999 : 115);
   }, [expanded]);
 
   const load = useCallback(async () => {
@@ -149,11 +154,24 @@ export default function Widget() {
       const res = await fetch("/api/usage", { cache: "no-store" });
       const json = await res.json();
       const accounts: AccountRow[] = json.accounts ?? [];
+      const ts = Date.now();
       for (const row of accounts) {
         if (row.lastChangeAt) {
           const prev = lastChange.current.get(row.email);
           if (!prev || row.lastChangeAt >= prev.at) {
             lastChange.current.set(row.email, { at: row.lastChangeAt });
+          }
+        }
+        if (row.usage && row.prev) {
+          for (const win of ["rolling", "weekly", "monthly"] as const) {
+            const key = `${row.email}:${win}`;
+            const cur = row.usage[win];
+            const prev = row.prev[win];
+            if (!isExhaustedWindow(cur) && cur.percent > prev.percent) {
+              if (!increaseAt.current.has(key)) increaseAt.current.set(key, ts);
+            } else {
+              increaseAt.current.delete(key);
+            }
           }
         }
       }
@@ -204,9 +222,93 @@ export default function Widget() {
     }
   };
 
-  const renderCard = (row: AccountRow) => {
+  const controls = (
+    <div className="ml-auto flex items-center gap-0.5" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        title={expanded ? "Collapse" : "Expand"}
+        className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+      >
+        {expanded ? (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-3"
+          >
+            <path d="m7 20 5-5 5 5" />
+            <path d="m7 4 5 5 5-5" />
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-3"
+          >
+            <path d="m7 15 5 5 5-5" />
+            <path d="m7 9 5-5 5 5" />
+          </svg>
+        )}
+      </button>
+      <button
+        onClick={load}
+        title="Refresh"
+        className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
+        >
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+          <path d="M8 16H3v5" />
+        </svg>
+      </button>
+      <button
+        onClick={() => (window as any).widget?.close()}
+        title="Close"
+        className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-3 w-3"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+
+  const renderCard = (row: AccountRow, withControls: boolean) => {
     const isInUse = row.email === inUseEmail;
     const exhausted = isExhausted(row);
+    const showInc = (win: string) => {
+      const at = increaseAt.current.get(`${row.email}:${win}`);
+      return !!at && Date.now() - at < 20000;
+    };
     return (
       <div
         key={row.email}
@@ -218,15 +320,15 @@ export default function Widget() {
               : "bg-white/5 border border-white/10"
         }`}
       >
-        <div className="flex items-center gap-1 mb-1.5">
-          <span className="text-[11px] text-zinc-200 truncate flex-1 font-medium">
-            {row.email}
-            {exhausted ? " · exhausted" : isInUse ? " · in use" : ""}
-          </span>
+        <div
+          className="flex items-center gap-1.5 mb-1.5"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        >
           <button
             onClick={() => copyKey(row.email)}
             title="Copy key"
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+            className="p-0.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors shrink-0"
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -242,6 +344,20 @@ export default function Widget() {
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
           </button>
+          <span className="text-[11px] text-zinc-200 truncate font-medium">
+            {row.email}
+            {exhausted ? " · exhausted" : ""}
+          </span>
+          {peakInfo.active && peakInfo.endAt ? (
+            <span className="text-[9px] font-medium text-red-300 whitespace-nowrap">
+              Peak Ends in {fmtDuration(peakInfo.endAt - now)}
+            </span>
+          ) : peakInfo.nextStartAt ? (
+            <span className="text-[9px] font-medium text-emerald-300 whitespace-nowrap">
+              Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
+            </span>
+          ) : null}
+          {withControls && controls}
         </div>
         {row.error ? (
           <div className="text-[10px] text-red-400">unavailable</div>
@@ -254,13 +370,20 @@ export default function Widget() {
                 isExhaustedWindow(row.usage.weekly) ||
                 isExhaustedWindow(row.usage.monthly)
               }
+              increased={showInc("rolling")}
             />
             <MiniBar
               label="Weekly"
               w={row.usage.weekly}
               dimmed={isExhaustedWindow(row.usage.monthly)}
+              increased={showInc("weekly")}
             />
-            <MiniBar label="Monthly" w={row.usage.monthly} dimmed={false} />
+            <MiniBar
+              label="Monthly"
+              w={row.usage.monthly}
+              dimmed={false}
+              increased={showInc("monthly")}
+            />
           </div>
         ) : null}
       </div>
@@ -277,103 +400,6 @@ export default function Widget() {
       }`}
     >
         <div
-          className="flex items-center gap-2 px-2.5 py-1.5 border-b border-white/10"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-        >
-          <span className="text-xs font-semibold text-zinc-100 whitespace-nowrap">
-            OpenCode API
-          </span>
-          {peakInfo.active && peakInfo.endAt ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-300 bg-red-500/15 border border-red-400/30 rounded-full px-1.5 py-0.5 whitespace-nowrap">
-              <span className="h-1 w-1 rounded-full bg-red-400" />
-              Peak ends in {fmtDuration(peakInfo.endAt - now)}
-            </span>
-          ) : peakInfo.nextStartAt ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 rounded-full px-1.5 py-0.5 whitespace-nowrap">
-              <span className="h-1 w-1 rounded-full bg-emerald-400" />
-              Peak starts in {fmtDuration(peakInfo.nextStartAt - now)}
-            </span>
-          ) : null}
-          <div className="ml-auto flex items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            <button
-              onClick={() => setExpanded(!expanded)}
-              title={expanded ? "Collapse" : "Expand"}
-              className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-            >
-              {expanded ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-3 w-3"
-                >
-                  <path d="m7 20 5-5 5 5" />
-                  <path d="m7 4 5 5 5-5" />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-3 w-3"
-                >
-                  <path d="m7 15 5 5 5-5" />
-                  <path d="m7 9 5-5 5 5" />
-                </svg>
-              )}
-            </button>
-            <button
-              onClick={load}
-              title="Refresh"
-              className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`}
-              >
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M8 16H3v5" />
-              </svg>
-            </button>
-            <button
-              onClick={() => (window as any).widget?.close()}
-              title="Close"
-              className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-3 w-3"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div
           className={
             expanded
               ? "flex-1 overflow-y-auto p-1.5 space-y-1.5"
@@ -383,9 +409,9 @@ export default function Widget() {
           {activeRow === null ? (
             <div className="text-[11px] text-zinc-500 px-1 py-2">Loading…</div>
           ) : expanded ? (
-            sortedRows?.map((row) => renderCard(row))
+            sortedRows?.map((row, i) => renderCard(row, i === 0))
           ) : (
-            renderCard(activeRow)
+            renderCard(activeRow, true)
           )}
         </div>
       </div>

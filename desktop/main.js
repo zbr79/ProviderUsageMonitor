@@ -121,7 +121,7 @@ ipcMain.on("widget-resize", (_e, height) => {
   if (!win) return;
   const disp = screen.getDisplayMatching(win.getBounds());
   const maxH = disp.workArea.height - 8;
-  const h = Math.max(150, Math.min(Math.round(height), maxH));
+  const h = Math.max(100, Math.min(Math.round(height), maxH));
   win.setSize(WIDTH, h);
 });
 
