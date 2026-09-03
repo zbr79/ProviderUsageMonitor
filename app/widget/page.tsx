@@ -115,13 +115,13 @@ function MiniBar({
   return (
     <div className="flex-1 min-w-0">
       <div className="flex justify-between text-[10px] leading-3 mb-0.5">
-        <span className="text-zinc-300">{label}</span>
-        <span className={dimmed ? "text-zinc-500" : "text-zinc-400"}>
+        <span className="text-zinc-200">{label}</span>
+        <span className={dimmed ? "text-zinc-400" : "text-zinc-100"}>
           {!dimmed && increased && <span className="text-emerald-300 arrow-pop">▲ </span>}
           {w.percent}%
         </span>
       </div>
-      <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-1 rounded-full bg-white/15 overflow-hidden">
         <div
           className={`h-full rounded-full ${dimmed ? "bg-zinc-500" : windowColor(w)}`}
           style={{ width: `${Math.min(w.percent, 100)}%` }}
@@ -227,7 +227,7 @@ export default function Widget() {
       <button
         onClick={() => setExpanded(!expanded)}
         title={expanded ? "Collapse" : "Expand"}
-        className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+        className="p-1 rounded-md text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors"
       >
         {expanded ? (
           <svg
@@ -240,8 +240,10 @@ export default function Widget() {
             strokeLinejoin="round"
             className="h-3 w-3"
           >
-            <path d="m7 20 5-5 5 5" />
-            <path d="m7 4 5 5 5-5" />
+            <path d="M4 14h6v6" />
+            <path d="M20 10h-6V4" />
+            <path d="M14 10l7-7" />
+            <path d="M10 14l-7 7" />
           </svg>
         ) : (
           <svg
@@ -254,15 +256,17 @@ export default function Widget() {
             strokeLinejoin="round"
             className="h-3 w-3"
           >
-            <path d="m7 15 5 5 5-5" />
-            <path d="m7 9 5-5 5 5" />
+            <path d="M15 3h6v6" />
+            <path d="M9 21H3v-6" />
+            <path d="M21 3l-7 7" />
+            <path d="M3 21l7-7" />
           </svg>
         )}
       </button>
       <button
         onClick={load}
         title="Refresh"
-        className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+        className="p-1 rounded-md text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -283,7 +287,7 @@ export default function Widget() {
       <button
         onClick={() => (window as any).widget?.close()}
         title="Close"
-        className="p-1 rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+        className="p-1 rounded-md text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -327,7 +331,7 @@ export default function Widget() {
           <button
             onClick={() => copyKey(row.email)}
             title="Copy key"
-            className="p-0.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors shrink-0"
+            className="p-0.5 rounded text-zinc-300 hover:text-zinc-100 hover:bg-white/10 transition-colors shrink-0"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <svg
@@ -344,15 +348,14 @@ export default function Widget() {
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
           </button>
-          <span className="text-[11px] text-zinc-200 truncate font-medium">
-            {row.email}
-            {exhausted ? " · exhausted" : ""}
+          <span className="text-[11px] text-zinc-100 truncate font-medium">
+            {row.email.slice(0, 7)}
           </span>
-          {peakInfo.active && peakInfo.endAt ? (
+          {withControls && peakInfo.active && peakInfo.endAt ? (
             <span className="text-[9px] font-medium text-red-300 whitespace-nowrap">
               Peak Ends in {fmtDuration(peakInfo.endAt - now)}
             </span>
-          ) : peakInfo.nextStartAt ? (
+          ) : withControls && peakInfo.nextStartAt ? (
             <span className="text-[9px] font-medium text-emerald-300 whitespace-nowrap">
               Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
             </span>
@@ -407,7 +410,7 @@ export default function Widget() {
           }
         >
           {activeRow === null ? (
-            <div className="text-[11px] text-zinc-500 px-1 py-2">Loading…</div>
+            <div className="text-[11px] text-zinc-400 px-1 py-2">Loading…</div>
           ) : expanded ? (
             sortedRows?.map((row, i) => renderCard(row, i === 0))
           ) : (
