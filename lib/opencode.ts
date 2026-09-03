@@ -1,6 +1,5 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import os from 'os'
 
 export interface Account {
   email: string
@@ -21,7 +20,6 @@ export interface Usage {
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json')
-const AUTH_FILE = path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json')
 const USAGE_URL = 'https://opencode.ai/zen/go/v1/usage'
 
 export async function getAccounts(): Promise<Account[]> {
@@ -45,7 +43,7 @@ export function maskKey(key: string): string {
 }
 
 const usageCache = new Map<string, { at: number; data: Usage | null }>()
-const CACHE_MS = 60_000
+const CACHE_MS = 10_000
 const FAILURE_CACHE_MS = 15_000
 
 export async function getUsage(key: string, email: string): Promise<Usage | null> {
@@ -70,26 +68,4 @@ export async function getUsage(key: string, email: string): Promise<Usage | null
     usageCache.set(email, { at: Date.now(), data: null })
     return null
   }
-}
-
-export async function getActiveEmail(accounts: Account[]): Promise<string | null> {
-  try {
-    const parsed = JSON.parse(await fs.readFile(AUTH_FILE, 'utf8'))
-    const key = parsed?.['opencode-go']?.key
-    if (typeof key !== 'string') return null
-    return accounts.find((a) => a.key === key)?.email ?? null
-  } catch {
-    return null
-  }
-}
-
-export async function setActiveAccount(key: string): Promise<void> {
-  const existing = JSON.parse(await fs.readFile(AUTH_FILE, 'utf8').catch(() => '{}'))
-  existing['opencode-go'] = { type: 'api', key }
-  try {
-    await fs.copyFile(AUTH_FILE, `${AUTH_FILE}.bak`)
-  } catch {
-    // no backup needed on first write
-  }
-  await fs.writeFile(AUTH_FILE, JSON.stringify(existing, null, 2), 'utf8')
 }

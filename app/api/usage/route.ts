@@ -1,4 +1,4 @@
-import { getAccounts, getUsage, maskKey } from '@/lib/opencode'
+import { getAccounts, getUsage } from '@/lib/opencode'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +9,6 @@ export async function GET() {
       const usage = await getUsage(acc.key, acc.email)
       return {
         email: acc.email,
-        keyMasked: maskKey(acc.key),
         usage,
         error: usage ? null : 'failed',
       }
