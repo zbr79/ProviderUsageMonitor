@@ -101,18 +101,32 @@ function fmtDuration(ms: number): string {
   return `${rem}m`;
 }
 
+function resetFmt(resetsAt: string): string {
+  const ms = new Date(resetsAt).getTime() - Date.now();
+  if (ms <= 0) return "0m";
+  const m = Math.floor(ms / 60000);
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  const mm = m % 60;
+  if (d > 0) return `${d}d ${h}h ${mm}m`;
+  if (h > 0) return `${h}h ${mm}m`;
+  return `${mm}m`;
+}
+
 function MiniBar({
   label,
   w,
   dimmed,
   increased,
   light,
+  reset,
 }: {
   label: string;
   w: UsageWindow;
   dimmed: boolean;
   increased: boolean;
   light: boolean;
+  reset: string | null;
 }) {
   return (
     <div className={`flex-1 min-w-0 transition-colors duration-700`}>
@@ -133,6 +147,11 @@ function MiniBar({
           style={{ width: `${Math.min(w.percent, 100)}%` }}
         />
       </div>
+      {reset && (
+        <div className={`text-[9px] leading-3 mt-0.5 transition-colors duration-700 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+          {reset}
+        </div>
+      )}
     </div>
   );
 }
@@ -163,6 +182,29 @@ export default function Widget() {
   useEffect(() => {
     (window as any).widget?.onToggleExpand?.(() => setExpanded((e) => !e));
   }, []);
+
+  useEffect(() => {
+    const onCtx = (e: MouseEvent) => {
+      e.preventDefault();
+      (window as any).widget?.showMenu();
+    };
+    document.addEventListener("contextmenu", onCtx);
+    return () => document.removeEventListener("contextmenu", onCtx);
+  }, []);
+
+  const onDragStart = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const w = window as any;
+    w.widget?.startDrag(e.screenX, e.screenY);
+    const move = (ev: MouseEvent) => w.widget?.moveDrag(ev.screenX, ev.screenY);
+    const up = () => {
+      w.widget?.endDrag();
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
 
   const light = bgBright !== null && bgBright < 0.5;
 
@@ -268,8 +310,8 @@ export default function Widget() {
         }`}
       >
         <div
-          className="flex items-center gap-1.5 mb-1.5"
-          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+          className="flex items-center gap-1.5 mb-1.5 cursor-move"
+          onMouseDown={onDragStart}
         >
           <button
             onClick={() => copyKey(row.email)}
@@ -321,6 +363,7 @@ export default function Widget() {
               }
               increased={showInc("rolling")}
               light={light}
+              reset={withControls ? resetFmt(row.usage.rolling.resetsAt) : null}
             />
             <MiniBar
               label="W"
@@ -328,6 +371,7 @@ export default function Widget() {
               dimmed={isExhaustedWindow(row.usage.monthly)}
               increased={showInc("weekly")}
               light={light}
+              reset={withControls ? resetFmt(row.usage.weekly.resetsAt) : null}
             />
             <MiniBar
               label="M"
@@ -335,6 +379,7 @@ export default function Widget() {
               dimmed={false}
               increased={showInc("monthly")}
               light={light}
+              reset={resetFmt(row.usage.monthly.resetsAt)}
             />
           </div>
         ) : null}

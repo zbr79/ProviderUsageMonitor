@@ -9,6 +9,7 @@ const WIDTH = 238;
 const CONFIG_PATH = path.join(app.getPath("userData"), "widget-config.json");
 
 let win = null;
+let dragOffset = null;
 
 function loadPos() {
   try {
@@ -100,16 +101,9 @@ function createWindow() {
     saveTimer = setTimeout(savePos, 300);
   });
 
-  win.webContents.on("context-menu", () => {
-    Menu.buildFromTemplate([
-      {
-        label: "Toggle Expand / Collapse",
-        click: () => win.webContents.send("widget-toggle-expand"),
-      },
-      { label: "Refresh", click: () => win.reload() },
-      { type: "separator" },
-      { label: "Quit", click: () => app.quit() },
-    ]).popup({ window: win });
+  win.webContents.on("context-menu", (e) => {
+    e.preventDefault();
+    showMenu();
   });
 
   win.on("closed", () => {
@@ -117,9 +111,36 @@ function createWindow() {
   });
 }
 
+function showMenu() {
+  if (!win) return;
+  Menu.buildFromTemplate([
+    {
+      label: "Toggle Expand / Collapse",
+      click: () => win.webContents.send("widget-toggle-expand"),
+    },
+    { label: "Refresh", click: () => win.reload() },
+    { type: "separator" },
+    { label: "Quit", click: () => app.quit() },
+  ]).popup({ window: win });
+}
+
 ipcMain.on("widget-close", () => app.quit());
 ipcMain.on("widget-minimize", () => {
   if (win) win.minimize();
+});
+ipcMain.on("widget-show-menu", () => showMenu());
+ipcMain.on("widget-drag-start", (_e, sx, sy) => {
+  if (!win) return;
+  const [x, y] = win.getPosition();
+  dragOffset = { dx: sx - x, dy: sy - y };
+});
+ipcMain.on("widget-drag-move", (_e, sx, sy) => {
+  if (!win || !dragOffset) return;
+  win.setPosition(Math.round(sx - dragOffset.dx), Math.round(sy - dragOffset.dy));
+});
+ipcMain.on("widget-drag-end", () => {
+  dragOffset = null;
+  savePos();
 });
 ipcMain.on("widget-resize", (_e, height) => {
   if (!win) return;
