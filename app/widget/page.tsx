@@ -24,6 +24,15 @@ interface AccountRow {
   lastChangeDetail: string | null;
 }
 
+interface CursorUsage {
+  autoPercentUsed: number | null;
+  apiPercentUsed: number | null;
+  totalPercentUsed: number | null;
+  billingCycleEnd: string | null;
+  accountName: string | null;
+  planName: string | null;
+}
+
 const POLL_MS = 60_000;
 
 function windowColor(w: UsageWindow): string {
@@ -113,6 +122,11 @@ function resetFmt(resetsAt: string): string {
   return `${mm}m`;
 }
 
+function fmtPct(v: number): string {
+  const p = Math.round(v * 10) / 10;
+  return Number.isInteger(p) ? String(p) : p.toFixed(1);
+}
+
 function MiniBar({
   label,
   w,
@@ -138,7 +152,7 @@ function MiniBar({
               ▲{" "}
             </span>
           )}
-          {w.percent}%
+          {fmtPct(w.percent)}%
         </span>
       </div>
       <div className={`h-1 rounded-full overflow-hidden transition-colors duration-700 ${light ? "bg-zinc-300/70" : "bg-white/15"}`}>
@@ -162,6 +176,10 @@ export default function Widget() {
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [bgBright, setBgBright] = useState<number | null>(null);
+  const [cursor, setCursor] = useState<CursorUsage | null>(null);
+  const [cursorError, setCursorError] = useState(false);
+  const [cursorEnabled, setCursorEnabled] = useState(true);
+  const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
 
@@ -214,14 +232,32 @@ export default function Widget() {
   }, []);
 
   useEffect(() => {
-    (window as any).widget?.resize(expanded ? 99999 : 115);
-  }, [expanded]);
+    const t = setTimeout(() => {
+      const h = document.body?.scrollHeight ?? 0;
+      if (h > 0) (window as any).widget?.resize(238, h + 6);
+    }, 80);
+    return () => clearTimeout(t);
+  }, [expanded, rows, cursor]);
 
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await fetch("/api/usage", { cache: "no-store" });
-      const json = await res.json();
+      const [usageRes, cursorRes, settingsRes] = await Promise.all([
+        fetch("/api/usage", { cache: "no-store" }),
+        fetch("/api/cursor", { cache: "no-store" }),
+        fetch("/api/settings", { cache: "no-store" }),
+      ]);
+      const json = await usageRes.json();
+      const cjson = await cursorRes.json();
+      const sjson = await settingsRes.json();
+      setCursorEnabled(sjson.settings?.cursorEnabled !== false);
+      setDisplayNames(sjson.settings?.displayNames ?? {});
+      setCursorError(!!cjson.error);
+      if (!cjson.error) setCursor(cjson.usage);
+      if (sjson.settings?.cursorEnabled === false) {
+        setCursor(null);
+        setCursorError(false);
+      }
       const accounts: AccountRow[] = json.accounts ?? [];
       const ts = Date.now();
       for (const row of accounts) {
@@ -313,10 +349,27 @@ export default function Widget() {
           className="flex items-center gap-1.5 mb-1.5 cursor-move"
           onMouseDown={onDragStart}
         >
+          <img
+            src="/opencode.ico"
+            alt="opencode"
+            className="h-3 w-3 shrink-0 rounded-[3px]"
+          />
+          <span className={`text-[11px] truncate font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
+            {displayNames[row.email] ?? row.email.slice(0, 4)}
+          </span>
+          {withControls && peakInfo.active && peakInfo.endAt ? (
+            <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-red-600" : "text-red-300"}`}>
+              Peak Ends in {fmtDuration(peakInfo.endAt - now)}
+            </span>
+          ) : withControls && peakInfo.nextStartAt ? (
+            <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-emerald-600" : "text-emerald-300"}`}>
+              Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
+            </span>
+          ) : null}
           <button
             onClick={() => copyKey(row.email)}
             title="Copy key"
-            className={`p-0.5 rounded transition-colors shrink-0 ${
+            className={`ml-auto p-0.5 rounded transition-colors shrink-0 ${
               light
                 ? "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70"
                 : "text-zinc-300 hover:text-zinc-100 hover:bg-white/10"
@@ -337,18 +390,6 @@ export default function Widget() {
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
           </button>
-          <span className={`text-[11px] truncate font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
-            {row.email.slice(0, 4)}
-          </span>
-          {withControls && peakInfo.active && peakInfo.endAt ? (
-            <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-red-600" : "text-red-300"}`}>
-              Peak Ends in {fmtDuration(peakInfo.endAt - now)}
-            </span>
-          ) : withControls && peakInfo.nextStartAt ? (
-            <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-emerald-600" : "text-emerald-300"}`}>
-              Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
-            </span>
-          ) : null}
         </div>
         {row.error ? (
           <div className="text-[10px] text-red-400">unavailable</div>
@@ -387,6 +428,81 @@ export default function Widget() {
     );
   };
 
+  const renderCursorCard = () => {
+    if (!cursorEnabled) return null;
+    if (cursorError && !cursor) return null;
+    const total = cursor?.totalPercentUsed ?? 0;
+    const exhausted = total >= 100;
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
+      light ? "bg-zinc-200" : "bg-zinc-900"
+    } ${
+      exhausted
+        ? light
+          ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+          : "border border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+        : light
+          ? "border border-zinc-400/50"
+          : "border border-white/15"
+    }`;
+    return (
+      <div className={cardClass}>
+        <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
+          <img
+            src="/cursor.ico"
+            alt="cursor"
+            className="h-3 w-3 shrink-0 rounded-[3px]"
+          />
+          <span
+            className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}
+            title={cursor?.accountName ?? ""}
+          >
+            {displayNames["cursor"] ?? cursor?.accountName ?? "crsr"}
+          </span>
+          {cursor?.planName && (
+            <span
+              className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                light
+                  ? "bg-blue-100 text-blue-700 border border-blue-300"
+                  : "bg-blue-500/15 text-blue-300 border border-blue-400/30"
+              }`}
+            >
+              {cursor.planName}
+            </span>
+          )}
+        </div>
+        {cursor ? (
+          <>
+            <div className="flex gap-2">
+              <MiniBar
+                label="First Party"
+                w={{ status: "ok", percent: cursor.autoPercentUsed ?? 0, resetsAt: "" }}
+                dimmed={false}
+                increased={false}
+                light={light}
+                reset={null}
+              />
+              <MiniBar
+                label="API"
+                w={{ status: "ok", percent: cursor.apiPercentUsed ?? 0, resetsAt: "" }}
+                dimmed={false}
+                increased={false}
+                light={light}
+                reset={null}
+              />
+            </div>
+            {cursor.billingCycleEnd && (
+              <div className={`text-[9px] leading-3 mt-1 transition-colors duration-700 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+                Resets {resetFmt(cursor.billingCycleEnd)}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-[10px] text-zinc-400">unavailable</div>
+        )}
+      </div>
+    );
+  };
+
   const peakInfo = useMemo(() => getPeakInfo(new Date(now)), [now]);
 
   return (
@@ -398,15 +514,21 @@ export default function Widget() {
             : ""
         }
       >
-        {activeRow === null ? (
-          <div className={`text-[11px] px-1 py-2 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
-            Loading…
-          </div>
-        ) : expanded ? (
-          sortedRows?.map((row, i) => renderCard(row, i === 0))
-        ) : (
-          renderCard(activeRow, true)
-        )}
+{activeRow === null && cursor === null ? (
+            <div className={`text-[11px] px-1 py-2 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+              Loading…
+            </div>
+          ) : expanded ? (
+            <>
+              {sortedRows?.map((row, i) => renderCard(row, i === 0))}
+              {renderCursorCard()}
+            </>
+          ) : (
+            <>
+              {activeRow ? renderCard(activeRow, true) : null}
+              {renderCursorCard()}
+            </>
+          )}
       </div>
     </div>
   );
