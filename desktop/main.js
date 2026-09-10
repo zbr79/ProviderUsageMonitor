@@ -4,11 +4,12 @@ const fs = require("fs");
 const path = require("path");
 
 const APP_ROOT = path.resolve(__dirname, "..");
-const WIDGET_URL = "http://localhost:3000/widget";
+const WIDGET_URL = "http://localhost:3100/widget";
 const WIDTH = 238;
 const CONFIG_PATH = path.join(app.getPath("userData"), "widget-config.json");
 
 let win = null;
+let settingsWin = null;
 let dragOffset = null;
 
 function loadPos() {
@@ -54,7 +55,7 @@ async function waitForServer(timeoutMs = 60000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch("http://localhost:3000/widget", {
+      const res = await fetch("http://localhost:3100/widget", {
         signal: AbortSignal.timeout(2000),
       });
       if (res.ok) return true;
@@ -111,6 +112,37 @@ function createWindow() {
   });
 }
 
+function openSettingsOverlay() {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.focus();
+    return;
+  }
+  const disp = win && !win.isDestroyed() ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay();
+  const wa = disp.workArea;
+  settingsWin = new BrowserWindow({
+    x: wa.x,
+    y: wa.y,
+    width: wa.width,
+    height: wa.height,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "settings-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  settingsWin.setAlwaysOnTop(true, "screen-saver");
+  settingsWin.loadURL("http://localhost:3100/settings");
+  settingsWin.on("closed", () => {
+    settingsWin = null;
+  });
+}
+
 function showMenu() {
   if (!win) return;
   Menu.buildFromTemplate([
@@ -119,10 +151,18 @@ function showMenu() {
       click: () => win.webContents.send("widget-toggle-expand"),
     },
     { label: "Refresh", click: () => win.reload() },
+    {
+      label: "Settings",
+      click: () => openSettingsOverlay(),
+    },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
   ]).popup({ window: win });
 }
+
+ipcMain.on("settings-close", () => {
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+});
 
 ipcMain.on("widget-close", () => app.quit());
 ipcMain.on("widget-minimize", () => {
@@ -142,12 +182,12 @@ ipcMain.on("widget-drag-end", () => {
   dragOffset = null;
   savePos();
 });
-ipcMain.on("widget-resize", (_e, height) => {
+ipcMain.on("widget-resize", (_e, width, height) => {
   if (!win) return;
   const disp = screen.getDisplayMatching(win.getBounds());
   const maxH = disp.workArea.height - 8;
   const h = Math.max(100, Math.min(Math.round(height), maxH));
-  win.setSize(WIDTH, h);
+  win.setSize(Math.round(width), h);
 });
 
 function startBgSampler() {
