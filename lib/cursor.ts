@@ -12,6 +12,8 @@ const STATE_DB = path.join(
 const USAGE_URL =
   'https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage'
 const PLAN_URL = 'https://api2.cursor.sh/aiserver.v1.DashboardService/GetPlanInfo'
+const SAND_URL =
+  'https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus'
 
 export interface CursorUsage {
   autoPercentUsed: number | null
@@ -23,6 +25,8 @@ export interface CursorUsage {
   bonusSpend: number | null
   accountName: string | null
   planName: string | null
+  grokPercentUsed: number | null
+  grokResetAt: string | null
 }
 
 let tokenCache: { at: number; token: string } | null = null
@@ -152,6 +156,32 @@ export async function getCursorUsage(): Promise<CursorUsage | null> {
       bonusSpend: typeof pu?.bonusSpend === 'number' ? pu.bonusSpend : null,
       accountName: await getAccountName(),
       planName,
+      grokPercentUsed: null,
+      grokResetAt: null,
+    }
+    try {
+      const sandRes = await fetch(SAND_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0',
+        },
+        body: '{}',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (sandRes.ok) {
+        const sj = await sandRes.json()
+        data.grokPercentUsed = typeof sj?.usagePercent === 'number' ? sj.usagePercent : null
+        data.grokResetAt =
+          typeof sj?.nextResetTimestampUtc === 'string'
+            ? new Date(sj.nextResetTimestampUtc).toISOString()
+            : null
+      }
+    } catch {
+      // grok bot usage is optional
     }
     usageCache = { at: Date.now(), data }
     return data

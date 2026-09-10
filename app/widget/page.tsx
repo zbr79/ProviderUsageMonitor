@@ -31,6 +31,8 @@ interface CursorUsage {
   billingCycleEnd: string | null;
   accountName: string | null;
   planName: string | null;
+  grokPercentUsed: number | null;
+  grokResetAt: string | null;
 }
 
 const POLL_MS = 60_000;
@@ -123,8 +125,9 @@ function resetFmt(resetsAt: string): string {
 }
 
 function fmtPct(v: number): string {
-  const p = Math.round(v * 10) / 10;
-  return Number.isInteger(p) ? String(p) : p.toFixed(1);
+  const r = Math.round(v * 10) / 10;
+  if (r > 99 && r < 100) return r.toFixed(1);
+  return String(Math.round(r));
 }
 
 function MiniBar({
@@ -430,8 +433,29 @@ export default function Widget() {
 
   const renderCursorCard = () => {
     if (!cursorEnabled) return null;
-    if (cursorError && !cursor) return null;
-    const total = cursor?.totalPercentUsed ?? 0;
+    if (!cursor) {
+      const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
+        light ? "bg-zinc-200" : "bg-zinc-900"
+      } ${light ? "border border-zinc-400/50" : "border border-white/15"}`;
+      return (
+        <div className={cardClass}>
+          <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
+            <img
+              src="/cursor.ico"
+              alt="cursor"
+              className="h-3 w-3 shrink-0 rounded-[3px]"
+            />
+            <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
+              crsr
+            </span>
+          </div>
+          <div className={`text-[10px] ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+            {cursorError ? "not signed in or unavailable" : "…"}
+          </div>
+        </div>
+      );
+    }
+    const total = cursor.totalPercentUsed ?? 0;
     const exhausted = total >= 100;
     const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
       light ? "bg-zinc-200" : "bg-zinc-900"
@@ -503,6 +527,56 @@ export default function Widget() {
     );
   };
 
+  const renderGrokCard = () => {
+    if (!cursorEnabled) return null;
+    if (cursor?.grokPercentUsed == null) return null;
+    const pct = cursor.grokPercentUsed;
+    const exhausted = pct >= 100;
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
+      light ? "bg-zinc-200" : "bg-zinc-900"
+    } ${
+      exhausted
+        ? light
+          ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+          : "border border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+        : light
+          ? "border border-zinc-400/50"
+          : "border border-white/15"
+    }`;
+    return (
+      <div className={cardClass}>
+        <div
+          className="flex items-center gap-1.5 mb-1.5 cursor-move"
+          onMouseDown={onDragStart}
+        >
+          <img
+            src="/grokbot.ico"
+            alt="grok bot"
+            className="h-3 w-3 shrink-0 rounded-[3px]"
+          />
+          <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
+            {displayNames["grok"] ?? "Grok Bot"}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <MiniBar
+            label="Usage"
+            w={{ status: "ok", percent: pct, resetsAt: "" }}
+            dimmed={false}
+            increased={false}
+            light={light}
+            reset={null}
+          />
+        </div>
+        {cursor.grokResetAt && (
+          <div className={`text-[9px] leading-3 mt-1 transition-colors duration-700 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+            Resets {resetFmt(cursor.grokResetAt)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const peakInfo = useMemo(() => getPeakInfo(new Date(now)), [now]);
 
   return (
@@ -522,11 +596,13 @@ export default function Widget() {
             <>
               {sortedRows?.map((row, i) => renderCard(row, i === 0))}
               {renderCursorCard()}
+              {renderGrokCard()}
             </>
           ) : (
             <>
               {activeRow ? renderCard(activeRow, true) : null}
               {renderCursorCard()}
+              {renderGrokCard()}
             </>
           )}
       </div>
