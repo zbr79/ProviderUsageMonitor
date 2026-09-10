@@ -7,7 +7,7 @@ interface AccountRow {
   email: string;
 }
 
-type Tab = "opencode" | "cursor";
+type Tab = "opencode" | "cursor" | "grok";
 
 export default function SettingsModal({
   onClose,
@@ -20,18 +20,21 @@ export default function SettingsModal({
   const [accounts, setAccounts] = useState<AccountRow[] | null>(null);
   const [cursorEnabled, setCursorEnabled] = useState(true);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const [cursorAccount, setCursorAccount] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [newKey, setNewKey] = useState("");
   const [busy, setBusy] = useState(false);
 
   const refresh = async () => {
-    const [u, s] = await Promise.all([
+    const [u, s, c] = await Promise.all([
       fetch("/api/usage", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/cursor", { cache: "no-store" }).then((r) => r.json()),
     ]);
     setAccounts((u.accounts ?? []).map((a: AccountRow) => ({ email: a.email })));
     setCursorEnabled(s.settings?.cursorEnabled !== false);
     setDisplayNames(s.settings?.displayNames ?? {});
+    setCursorAccount(c.usage?.accountName ?? null);
   };
 
   useEffect(() => {
@@ -171,6 +174,9 @@ export default function SettingsModal({
           <button className={tabClass("cursor")} onClick={() => setTab("cursor")}>
             Cursor
           </button>
+          <button className={tabClass("grok")} onClick={() => setTab("grok")}>
+            Grok Bot
+          </button>
         </div>
 
         {tab === "opencode" ? (
@@ -229,7 +235,7 @@ export default function SettingsModal({
               </button>
             </form>
           </div>
-        ) : (
+        ) : tab === "cursor" ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
               <div>
@@ -259,6 +265,23 @@ export default function SettingsModal({
                 onBlur={(e) => saveDisplayName("cursor", e.target.value)}
                 className="w-full rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
               />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
+              <div className="text-xs text-zinc-400 mb-1">Nickname (display name)</div>
+              <input
+                defaultValue={displayNames["grok"] ?? ""}
+                placeholder="grok bot nickname"
+                onBlur={(e) => saveDisplayName("grok", e.target.value)}
+                className="w-full rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
+              />
+              {cursorAccount && (
+                <div className="text-xs text-zinc-500 mt-1 truncate" title={cursorAccount}>
+                  {cursorAccount}
+                </div>
+              )}
             </div>
           </div>
         )}
