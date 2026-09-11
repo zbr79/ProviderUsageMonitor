@@ -19,27 +19,85 @@ export default function SettingsModal({
   const [tab, setTab] = useState<Tab>("opencode");
   const [accounts, setAccounts] = useState<AccountRow[] | null>(null);
   const [cursorEnabled, setCursorEnabled] = useState(true);
+  const [grokEnabled, setGrokEnabled] = useState(true);
+  const [subDetail, setSubDetail] = useState<"cursor" | "grok" | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const [disabledAccounts, setDisabledAccounts] = useState<string[]>([]);
   const [cursorAccount, setCursorAccount] = useState<string | null>(null);
+  const [cursorPlan, setCursorPlan] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [newKey, setNewKey] = useState("");
   const [busy, setBusy] = useState(false);
+  const [detailEmail, setDetailEmail] = useState<string | null>(null);
+  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [editKey, setEditKey] = useState(false);
+  const [newKeyValue, setNewKeyValue] = useState("");
+  const [keyBusy, setKeyBusy] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
   const refresh = async () => {
-    const [u, s, c] = await Promise.all([
-      fetch("/api/usage", { cache: "no-store" }).then((r) => r.json()),
+    const [u, s] = await Promise.all([
+      fetch("/api/usage?all=1", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/cursor", { cache: "no-store" }).then((r) => r.json()),
     ]);
     setAccounts((u.accounts ?? []).map((a: AccountRow) => ({ email: a.email })));
     setCursorEnabled(s.settings?.cursorEnabled !== false);
+    setGrokEnabled(s.settings?.grokEnabled !== false);
     setDisplayNames(s.settings?.displayNames ?? {});
-    setCursorAccount(c.usage?.accountName ?? null);
+    setDisabledAccounts(s.settings?.disabledAccounts ?? []);
+    fetch("/api/cursor", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((c) => {
+        setCursorAccount(c.usage?.accountName ?? null);
+        setCursorPlan(c.usage?.planName ?? null);
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
     refresh();
   }, []);
+
+  const openDetail = async (email: string) => {
+    setDetailEmail(email);
+    setDetailKey(null);
+    setEditKey(false);
+    try {
+      const res = await fetch(`/api/key?email=${encodeURIComponent(email)}`);
+      const json = await res.json();
+      setDetailKey(json.key ?? null);
+    } catch {
+      setDetailKey(null);
+    }
+  };
+
+  const maskKey = (k: string) => `${k.slice(0, Math.ceil(k.length / 2))}***`;
+
+  const saveNewKey = async () => {
+    if (!detailEmail) return;
+    setKeyBusy(true);
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: detailEmail, key: newKeyValue }),
+      });
+      if (res.ok) {
+        toastSuccess("API key updated");
+        setDetailKey(newKeyValue);
+        setNewKeyValue("");
+        setEditKey(false);
+        onChanged();
+      } else {
+        const json = await res.json();
+        toastError(json.error ?? "Update failed");
+      }
+    } catch {
+      toastError("Update failed");
+    } finally {
+      setKeyBusy(false);
+    }
+  };
 
   const saveDisplayName = async (key: string, name: string) => {
     const next = { ...displayNames, [key]: name };
@@ -59,6 +117,52 @@ export default function SettingsModal({
       }
     } catch {
       toastError("Save failed");
+    }
+  };
+
+  const toggleAccount = async (email: string, enabled: boolean) => {
+    const lower = email.toLowerCase();
+    const next = enabled
+      ? disabledAccounts.filter((e) => e !== lower)
+      : [...disabledAccounts.filter((e) => e !== lower), lower];
+    setDisabledAccounts(next);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cursorEnabled, displayNames, disabledAccounts: next }),
+      });
+      if (res.ok) {
+        toastSuccess(enabled ? "Account enabled" : "Account disabled");
+        onChanged();
+      } else {
+        toastError("Save failed");
+        setDisabledAccounts(disabledAccounts);
+      }
+    } catch {
+      toastError("Save failed");
+      setDisabledAccounts(disabledAccounts);
+    }
+  };
+
+  const toggleGrok = async (enabled: boolean) => {
+    setGrokEnabled(enabled);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grokEnabled: enabled }),
+      });
+      if (res.ok) {
+        toastSuccess(enabled ? "Grok Bot monitoring on" : "Grok Bot monitoring off");
+        onChanged();
+      } else {
+        toastError("Save failed");
+        setGrokEnabled(!enabled);
+      }
+    } catch {
+      toastError("Save failed");
+      setGrokEnabled(!enabled);
     }
   };
 
@@ -137,14 +241,16 @@ export default function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
-      onClick={onClose}
+      className="fixed inset-0 bg-transparent flex items-center justify-center p-4 z-50"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
-        className="bg-zinc-900 rounded-xl shadow-2xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto border border-zinc-700"
+        className="bg-zinc-900 rounded-xl shadow-2xl w-[576px] h-[608px] flex flex-col border border-zinc-700 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between px-5 pt-5 pb-2">
           <h2 className="text-lg font-bold text-zinc-100">Settings</h2>
           <button
             onClick={onClose}
@@ -167,7 +273,7 @@ export default function SettingsModal({
           </button>
         </div>
 
-        <div className="flex gap-1 mb-4">
+        <div className="flex gap-1 px-5 mb-3">
           <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
             OpenCode
           </button>
@@ -179,9 +285,48 @@ export default function SettingsModal({
           </button>
         </div>
 
+        <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5">
         {tab === "opencode" ? (
           <div>
-            <div className="space-y-2 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-zinc-300">Accounts</span>
+              <button
+                onClick={() => setShowAdd(!showAdd)}
+                className={`px-3 py-1.5 rounded-lg text-sm ${
+                  showAdd
+                    ? "bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+                    : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                }`}
+              >
+                {showAdd ? "Cancel" : "+ Add"}
+              </button>
+            </div>
+            {showAdd && (
+              <form onSubmit={addAccount} className="flex flex-col gap-2 mb-3">
+                <input
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="email or label"
+                  required
+                  className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500"
+                />
+                <input
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                  placeholder="sk-..."
+                  required
+                  className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-2 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-sm disabled:opacity-50"
+                >
+                  {busy ? "Adding…" : "Add account"}
+                </button>
+              </form>
+            )}
+            <div className="space-y-2">
               {accounts === null ? (
                 <div className="text-sm text-zinc-500">Loading…</div>
               ) : accounts.length === 0 ? (
@@ -190,102 +335,420 @@ export default function SettingsModal({
                 accounts.map((a) => (
                   <div
                     key={a.email}
-                    className="flex flex-col gap-1.5 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
+                    className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
                   >
                     <div className="flex items-center gap-2">
-                      <input
-                        defaultValue={displayNames[a.email] ?? ""}
-                        placeholder="display name"
-                        onBlur={(e) => saveDisplayName(a.email, e.target.value)}
-                        className="flex-1 min-w-0 rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
-                      />
+                      <button
+                        onClick={() => openDetail(a.email)}
+                        className="flex-1 min-w-0 text-left text-sm truncate"
+                      >
+                        {displayNames[a.email] ? (
+                          <span className="text-zinc-200">{displayNames[a.email]}</span>
+                        ) : (
+                          <span className="text-zinc-600">set nickname…</span>
+                        )}
+                      </button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() =>
+                          toggleAccount(
+                            a.email,
+                            disabledAccounts.includes(a.email.toLowerCase()),
+                          )
+                        }
+                        title={
+                          disabledAccounts.includes(a.email.toLowerCase())
+                            ? "Enable account"
+                            : "Disable account"
+                        }
+                        className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                          disabledAccounts.includes(a.email.toLowerCase())
+                            ? "bg-zinc-600"
+                            : "bg-emerald-500"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                            disabledAccounts.includes(a.email.toLowerCase())
+                              ? "left-0.5"
+                              : "left-4"
+                          }`}
+                        />
+                      </button>
+                      <button
+                        onClick={() => openDetail(a.email)}
+                        title="Account details"
+                        className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-3.5 w-3.5"
+                        >
+                          <circle cx="12" cy="12" r="3" />
+                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => removeAccount(a.email)}
-                        className="text-xs px-2 py-1 rounded bg-red-900/40 hover:bg-red-900 text-red-300 shrink-0"
+                        title="Remove account"
+                        className="p-1 rounded text-zinc-400 hover:text-red-300 hover:bg-zinc-700 shrink-0"
                       >
-                        Remove
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-3.5 w-3.5"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        </svg>
                       </button>
+                      </div>
                     </div>
-                    <div className="text-xs text-zinc-500 truncate">{a.email}</div>
+                    <div className="mt-1 text-xs text-zinc-500 truncate" title={a.email}>
+                      {a.email}
+                    </div>
                   </div>
                 ))
               )}
             </div>
-            <form onSubmit={addAccount} className="flex flex-col gap-2">
-              <input
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="email or label"
-                required
-                className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500"
-              />
-              <input
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
-                placeholder="sk-..."
-                required
-                className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-2 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
-              />
-              <button
-                type="submit"
-                disabled={busy}
-                className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-sm disabled:opacity-50"
-              >
-                {busy ? "Adding…" : "Add account"}
-              </button>
-            </form>
           </div>
         ) : tab === "cursor" ? (
           <div className="space-y-2">
-            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
-              <div>
-                <div className="text-sm font-medium text-zinc-100">Cursor monitoring</div>
-                <div className="text-xs text-zinc-400">
-                  Reads usage from your local Cursor install (no keys needed)
+            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSubDetail("cursor")}
+                  className="flex-1 min-w-0 text-left text-sm truncate"
+                >
+                  {displayNames["cursor"] ? (
+                    <span className="text-zinc-200">{displayNames["cursor"]}</span>
+                  ) : (
+                    <span className="text-zinc-600">set nickname…</span>
+                  )}
+                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => toggleCursor(!cursorEnabled)}
+                    title={cursorEnabled ? "Disable cursor monitoring" : "Enable cursor monitoring"}
+                    className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                      cursorEnabled ? "bg-emerald-500" : "bg-zinc-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                        cursorEnabled ? "left-4" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setSubDetail("cursor")}
+                    title="Cursor details"
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3.5 w-3.5"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => toggleCursor(!cursorEnabled)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  cursorEnabled ? "bg-emerald-500" : "bg-zinc-600"
-                }`}
-              >
+              <div className="mt-1 flex items-center gap-2">
                 <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                    cursorEnabled ? "left-5" : "left-0.5"
-                  }`}
-                />
-              </button>
-            </div>
-            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
-              <div className="text-xs text-zinc-400 mb-1">Display name</div>
-              <input
-                defaultValue={displayNames["cursor"] ?? ""}
-                placeholder="cursor display name"
-                onBlur={(e) => saveDisplayName("cursor", e.target.value)}
-                className="w-full rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
-              />
+                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
+                  title={cursorAccount ?? ""}
+                >
+                  {cursorAccount ?? "account unavailable"}
+                </span>
+                {cursorPlan && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
+                    {cursorPlan}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
-              <div className="text-xs text-zinc-400 mb-1">Nickname (display name)</div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSubDetail("grok")}
+                  className="flex-1 min-w-0 text-left text-sm truncate"
+                >
+                  {displayNames["grok"] ? (
+                    <span className="text-zinc-200">{displayNames["grok"]}</span>
+                  ) : (
+                    <span className="text-zinc-600">set nickname…</span>
+                  )}
+                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => toggleGrok(!grokEnabled)}
+                    title={grokEnabled ? "Disable Grok Bot monitoring" : "Enable Grok Bot monitoring"}
+                    className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                      grokEnabled ? "bg-emerald-500" : "bg-zinc-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                        grokEnabled ? "left-4" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setSubDetail("grok")}
+                    title="Grok Bot details"
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3.5 w-3.5"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-zinc-500 truncate" title={cursorAccount ?? ""}>
+                {cursorAccount ?? "account unavailable"}
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+      </div>
+      {detailEmail && (
+        <div
+          className="fixed inset-0 bg-transparent flex items-center justify-center p-4 z-50"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setDetailEmail(null);
+          }}
+        >
+          <div
+            className="bg-zinc-900 rounded-xl shadow-2xl w-[420px] border border-zinc-700 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="text-base font-bold text-zinc-100 truncate">
+                  {detailEmail}
+                </h3>
+                <button
+                  onClick={() => {
+                    setNewKeyValue("");
+                    setEditKey(true);
+                  }}
+                  title="Update API key"
+                  className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 shrink-0"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                onClick={() => setDetailEmail(null)}
+                title="Close"
+                className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-zinc-400 mb-1">Nickname</div>
+                <input
+                  defaultValue={displayNames[detailEmail] ?? ""}
+                  placeholder="nickname"
+                  onBlur={(e) => saveDisplayName(detailEmail, e.target.value)}
+                  className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-zinc-400 mb-1">API key</div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex-1 min-w-0 text-xs font-mono text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 break-all">
+                    {detailKey ? maskKey(detailKey) : "…"}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setNewKeyValue("");
+                      setEditKey(true);
+                    }}
+                    title="Update API key"
+                    className="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 shrink-0"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3.5 w-3.5"
+                    >
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {editKey && detailEmail && (
+        <div
+          className="fixed inset-0 bg-transparent flex items-center justify-center p-4 z-[60]"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setEditKey(false);
+          }}
+        >
+          <div
+            className="bg-zinc-900 rounded-xl shadow-2xl w-[420px] border border-zinc-700 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-zinc-100 mb-4">
+              Update API key · {detailEmail}
+            </h3>
+            <div className="flex flex-col gap-3">
               <input
-                defaultValue={displayNames["grok"] ?? ""}
-                placeholder="grok bot nickname"
-                onBlur={(e) => saveDisplayName("grok", e.target.value)}
-                className="w-full rounded bg-zinc-900 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
+                value={newKeyValue}
+                onChange={(e) => setNewKeyValue(e.target.value)}
+                placeholder="new sk-... key"
+                className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
               />
-              {cursorAccount && (
-                <div className="text-xs text-zinc-500 mt-1 truncate" title={cursorAccount}>
-                  {cursorAccount}
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setEditKey(false)}
+                  className="px-3 py-1.5 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveNewKey}
+                  disabled={keyBusy || !newKeyValue.trim()}
+                  className="px-3 py-1.5 rounded-lg text-sm bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                >
+                  {keyBusy ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+{subDetail && (
+        <div
+          className="fixed inset-0 bg-transparent flex items-center justify-center p-4 z-[70]"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setSubDetail(null);
+          }}
+        >
+          <div
+            className="bg-zinc-900 rounded-xl shadow-2xl w-[420px] border border-zinc-700 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-zinc-100">
+                {subDetail === "cursor" ? "Cursor" : "Grok Bot"}
+              </h3>
+              <button
+                onClick={() => setSubDetail(null)}
+                title="Close"
+                className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-zinc-400 mb-1">Nickname</div>
+                <input
+                  defaultValue={displayNames[subDetail] ?? ""}
+                  placeholder="nickname"
+                  onBlur={(e) => saveDisplayName(subDetail, e.target.value)}
+                  className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-zinc-400 mb-1">Account</div>
+                <div className="text-sm text-zinc-200 truncate" title={cursorAccount ?? ""}>
+                  {cursorAccount ?? "unavailable"}
+                </div>
+              </div>
+              {subDetail === "cursor" && cursorPlan && (
+                <div>
+                  <div className="text-xs text-zinc-400 mb-1">Plan</div>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
+                    {cursorPlan}
+                  </span>
                 </div>
               )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

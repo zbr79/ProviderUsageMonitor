@@ -43,3 +43,12 @@ body {
   display: inline-block;
   animation: arrow-fade 20s ease-in-out forwards;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
