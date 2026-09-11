@@ -123,25 +123,29 @@ export async function getCursorUsage(): Promise<CursorUsage | null> {
     const json = await res.json()
     const pu = json?.planUsage
     let planName: string | null = null
-    try {
-      const planRes = await fetch(PLAN_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'User-Agent': 'Mozilla/5.0',
-        },
-        body: '{}',
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10_000),
-      })
-      if (planRes.ok) {
-        const pj = await planRes.json()
-        planName = pj?.planInfo?.planName ?? null
-      }
-    } catch {
-      // plan info is optional
+    let grokPercentUsed: number | null = null
+    let grokResetAt: string | null = null
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': 'Mozilla/5.0',
+    }
+    const [planRes, sandRes] = await Promise.all([
+      fetch(PLAN_URL, { method: 'POST', headers, body: '{}', cache: 'no-store', signal: AbortSignal.timeout(10_000) }).catch(() => null),
+      fetch(SAND_URL, { method: 'POST', headers, body: '{}', cache: 'no-store', signal: AbortSignal.timeout(10_000) }).catch(() => null),
+    ])
+    if (planRes?.ok) {
+      const pj = await planRes.json()
+      planName = pj?.planInfo?.planName ?? null
+    }
+    if (sandRes?.ok) {
+      const sj = await sandRes.json()
+      grokPercentUsed = typeof sj?.usagePercent === 'number' ? sj.usagePercent : null
+      grokResetAt =
+        typeof sj?.nextResetTimestampUtc === 'string'
+          ? new Date(sj.nextResetTimestampUtc).toISOString()
+          : null
     }
     const data: CursorUsage = {
       autoPercentUsed: typeof pu?.autoPercentUsed === 'number' ? pu.autoPercentUsed : null,
@@ -156,32 +160,8 @@ export async function getCursorUsage(): Promise<CursorUsage | null> {
       bonusSpend: typeof pu?.bonusSpend === 'number' ? pu.bonusSpend : null,
       accountName: await getAccountName(),
       planName,
-      grokPercentUsed: null,
-      grokResetAt: null,
-    }
-    try {
-      const sandRes = await fetch(SAND_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'User-Agent': 'Mozilla/5.0',
-        },
-        body: '{}',
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10_000),
-      })
-      if (sandRes.ok) {
-        const sj = await sandRes.json()
-        data.grokPercentUsed = typeof sj?.usagePercent === 'number' ? sj.usagePercent : null
-        data.grokResetAt =
-          typeof sj?.nextResetTimestampUtc === 'string'
-            ? new Date(sj.nextResetTimestampUtc).toISOString()
-            : null
-      }
-    } catch {
-      // grok bot usage is optional
+      grokPercentUsed,
+      grokResetAt,
     }
     usageCache = { at: Date.now(), data }
     return data

@@ -13,10 +13,15 @@ export async function POST(req: NextRequest) {
   const current = await getSettings()
   const cursorEnabled =
     typeof body?.cursorEnabled === 'boolean' ? body.cursorEnabled : current.cursorEnabled
+  const grokEnabled =
+    typeof body?.grokEnabled === 'boolean' ? body.grokEnabled : current.grokEnabled
   const displayNames =
     body?.displayNames && typeof body.displayNames === 'object'
       ? body.displayNames
       : current.displayNames
-  await saveSettings({ cursorEnabled, displayNames })
+  const disabledAccounts = Array.isArray(body?.disabledAccounts)
+    ? body.disabledAccounts.map((e: unknown) => String(e).toLowerCase())
+    : current.disabledAccounts
+  await saveSettings({ cursorEnabled, grokEnabled, displayNames, disabledAccounts })
   return Response.json({ ok: true })
 }

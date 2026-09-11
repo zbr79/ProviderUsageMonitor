@@ -3,7 +3,9 @@ import path from 'path'
 
 export interface Settings {
   cursorEnabled: boolean
+  grokEnabled: boolean
   displayNames: Record<string, string>
+  disabledAccounts: string[]
 }
 
 const FILE = path.join(process.cwd(), 'data', 'settings.json')
@@ -13,13 +15,17 @@ export async function getSettings(): Promise<Settings> {
     const parsed = JSON.parse(await fs.readFile(FILE, 'utf8'))
     return {
       cursorEnabled: parsed?.cursorEnabled !== false,
+      grokEnabled: parsed?.grokEnabled !== false,
       displayNames:
         parsed?.displayNames && typeof parsed.displayNames === 'object'
           ? parsed.displayNames
           : {},
+      disabledAccounts: Array.isArray(parsed?.disabledAccounts)
+        ? parsed.disabledAccounts.map((e: unknown) => String(e).toLowerCase())
+        : [],
     }
   } catch {
-    return { cursorEnabled: true, displayNames: {} }
+    return { cursorEnabled: true, grokEnabled: true, displayNames: {}, disabledAccounts: [] }
   }
 }
 

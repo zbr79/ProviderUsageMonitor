@@ -182,6 +182,7 @@ export default function Widget() {
   const [cursor, setCursor] = useState<CursorUsage | null>(null);
   const [cursorError, setCursorError] = useState(false);
   const [cursorEnabled, setCursorEnabled] = useState(true);
+  const [grokEnabled, setGrokEnabled] = useState(true);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
@@ -254,6 +255,7 @@ export default function Widget() {
       const cjson = await cursorRes.json();
       const sjson = await settingsRes.json();
       setCursorEnabled(sjson.settings?.cursorEnabled !== false);
+      setGrokEnabled(sjson.settings?.grokEnabled !== false);
       setDisplayNames(sjson.settings?.displayNames ?? {});
       setCursorError(!!cjson.error);
       if (!cjson.error) setCursor(cjson.usage);
@@ -528,7 +530,7 @@ export default function Widget() {
   };
 
   const renderGrokCard = () => {
-    if (!cursorEnabled) return null;
+    if (!cursorEnabled || !grokEnabled) return null;
     if (cursor?.grokPercentUsed == null) return null;
     const pct = cursor.grokPercentUsed;
     const exhausted = pct >= 100;
