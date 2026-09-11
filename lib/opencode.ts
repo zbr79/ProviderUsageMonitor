@@ -37,11 +37,6 @@ export async function saveAccounts(accounts: Account[]): Promise<void> {
   await fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2), 'utf8')
 }
 
-export function maskKey(key: string): string {
-  if (key.length <= 10) return '***'
-  return `${key.slice(0, 7)}...${key.slice(-4)}`
-}
-
 const usageCache = new Map<string, { at: number; data: Usage | null }>()
 const CACHE_MS = 10_000
 const FAILURE_CACHE_MS = 15_000

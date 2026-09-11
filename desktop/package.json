@@ -1,5 +1,5 @@
 {
-  "name": "opencode-widget",
+  "name": "provider-usage-widget",
   "version": "1.0.0",
   "private": true,
   "main": "main.js",
