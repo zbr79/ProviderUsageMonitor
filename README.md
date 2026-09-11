@@ -1,4 +1,4 @@
-# OpenCode API — Multi-Provider Usage Monitor
+# Provider Usage Monitor
 
 A local dashboard + always-on-top floating desktop widget that tracks AI subscription usage across **five providers**:
 
