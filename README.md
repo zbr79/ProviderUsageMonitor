@@ -1,6 +1,6 @@
 # Provider Usage Monitor
 
-A local dashboard + always-on-top floating desktop widget that tracks AI subscription usage across **five providers**:
+An always-on-top floating desktop widget that tracks AI subscription usage across **five providers**:
 
 | Provider | What's shown | Data source |
 | --- | --- | --- |
@@ -17,21 +17,21 @@ No accounts or passwords leave your machine except the API calls each provider's
 ## Architecture
 
 ```
-Next.js app (web dashboard)          Electron widget (desktop/)
-├── /                dashboard        ├── frameless, always-on-top
-├── /widget          compact panel    ├── follows your theme (adaptive background)
-├── /settings        settings modal   ├── draggable, expandable
-└── /api/*           usage endpoints  └── right-click menu (expand, refresh, settings, quit)
+Next.js app (server)                 Electron widget (desktop/)
+├── /widget          floating panel  ├── frameless, always-on-top
+├── /settings        settings modal  ├── follows your theme (adaptive background)
+├── /                → /widget       ├── draggable, expandable
+└── /api/*           usage endpoints └── right-click menu (expand, refresh, settings, quit)
 ```
 
-- The **web dashboard** and **widget** both read from the same local API routes.
-- The widget runs on port **3100** — deliberately not 3000 so it can coexist with other local dev servers.
+- The widget and settings modal read from the same local API routes.
+- The server runs on port **3100** — deliberately not 3000 so it can coexist with other local dev servers.
 - Every provider integration lives in `lib/`: `opencode.ts`, `cursor.ts`, `codex.ts`, `claude.ts`, `settings.ts`.
 
 ## Requirements
 
 - **Node.js 20+** (built and tested on Node 24)
-- Windows (the widget uses Electron; the web app runs anywhere)
+- Windows (the widget uses Electron; the server runs anywhere)
 - Optional: Cursor, Codex CLI, Claude Code installed locally — each provider is auto-detected
 
 ## Setup
@@ -45,17 +45,12 @@ cd desktop && npm install && cd ..
 
 # 3. Build and run
 npm run build
-npm run start        # serves the dashboard on http://localhost:3100
+npm run start        # serves the app on http://localhost:3100
 ```
 
-### Desktop shortcuts
+### Desktop shortcut
 
-Two shortcuts are created on the Desktop (see `app-launcher.vbs` / `desktop/widget-launcher.vbs`):
-
-- **OpenCode App** — starts the server hidden and opens the dashboard in your browser
-- **OpenCode Widget** — starts the floating panel
-
-`start-app.cmd` handles first-run builds and port checks.
+`desktop/widget-launcher.vbs` starts the server hidden and launches the floating widget. Create a shortcut to it (via `wscript.exe`) for one-click launch.
 
 ## Accounts & Secrets
 
@@ -103,9 +98,9 @@ Cursor / Codex / Claude read their tokens directly from each app's local credent
 app/
 ├── api/            # usage endpoints (opencode, cursor, codex, claude, settings, accounts, key)
 ├── components/     # SettingsModal, toast system
-├── page.tsx        # browser dashboard
-├── settings/       # settings page (widget overlay)
-└── widget/         # compact floating panel UI
+├── page.tsx        # redirects / → /widget
+├── settings/       # settings modal overlay
+└── widget/         # floating panel UI
 desktop/            # Electron wrapper (main.js, preload, launchers)
 lib/                # provider integrations + settings store
 data/               # local secrets (gitignored)
