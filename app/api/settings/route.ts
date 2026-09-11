@@ -19,6 +19,10 @@ export async function POST(req: NextRequest) {
     typeof body?.codexEnabled === 'boolean' ? body.codexEnabled : current.codexEnabled
   const claudeEnabled =
     typeof body?.claudeEnabled === 'boolean' ? body.claudeEnabled : current.claudeEnabled
+  const showProviderNames =
+    typeof body?.showProviderNames === 'boolean'
+      ? body.showProviderNames
+      : current.showProviderNames
   const displayNames =
     body?.displayNames && typeof body.displayNames === 'object'
       ? body.displayNames
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest) {
     grokEnabled,
     codexEnabled,
     claudeEnabled,
+    showProviderNames,
     displayNames,
     disabledAccounts,
   })

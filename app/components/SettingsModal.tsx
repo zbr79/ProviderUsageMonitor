@@ -26,6 +26,7 @@ export default function SettingsModal({
   const [claudeEnabled, setClaudeEnabled] = useState(true);
   const [claudeAccount, setClaudeAccount] = useState<string | null>(null);
   const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
+  const [showProviderNames, setShowProviderNames] = useState(false);
   const [subDetail, setSubDetail] = useState<"cursor" | "grok" | "codex" | "claude" | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [disabledAccounts, setDisabledAccounts] = useState<string[]>([]);
@@ -51,6 +52,7 @@ export default function SettingsModal({
     setGrokEnabled(s.settings?.grokEnabled !== false);
     setCodexEnabled(s.settings?.codexEnabled !== false);
     setClaudeEnabled(s.settings?.claudeEnabled !== false);
+    setShowProviderNames(s.settings?.showProviderNames === true);
     setDisplayNames(s.settings?.displayNames ?? {});
     setDisabledAccounts(s.settings?.disabledAccounts ?? []);
     fetch("/api/cursor", { cache: "no-store" })
@@ -172,6 +174,27 @@ export default function SettingsModal({
     } catch {
       toastError("Save failed");
       setDisabledAccounts(disabledAccounts);
+    }
+  };
+
+  const toggleProviderNames = async (enabled: boolean) => {
+    setShowProviderNames(enabled);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showProviderNames: enabled }),
+      });
+      if (res.ok) {
+        toastSuccess(enabled ? "Cards show provider names" : "Cards show nicknames");
+        onChanged();
+      } else {
+        toastError("Save failed");
+        setShowProviderNames(!enabled);
+      }
+    } catch {
+      toastError("Save failed");
+      setShowProviderNames(!enabled);
     }
   };
 
@@ -345,6 +368,27 @@ export default function SettingsModal({
           </button>
         </div>
 
+        <div className="flex items-center justify-between px-5 pb-3 mb-3 border-b border-zinc-800">
+          <div>
+            <div className="text-sm font-medium text-zinc-200">Show provider names</div>
+            <div className="text-xs text-zinc-500">
+              Display provider names on widget cards instead of nicknames
+            </div>
+          </div>
+          <button
+            onClick={() => toggleProviderNames(!showProviderNames)}
+            className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
+              showProviderNames ? "bg-emerald-500" : "bg-zinc-600"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
+                showProviderNames ? "left-5" : "left-0.5"
+              }`}
+            />
+          </button>
+        </div>
+
         <div className="flex gap-1 px-5 mb-3">
           <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
             OpenCode
@@ -507,34 +551,26 @@ export default function SettingsModal({
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setSubDetail("cursor")}
-                  className="flex-1 min-w-0 text-left text-sm truncate"
+                  onClick={() => toggleCursor(!cursorEnabled)}
+                  title={cursorEnabled ? "Disable cursor monitoring" : "Enable cursor monitoring"}
+                  className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                    cursorEnabled ? "bg-emerald-500" : "bg-zinc-600"
+                  }`}
                 >
-                  {displayNames["cursor"] ? (
-                    <span className="text-zinc-200">{displayNames["cursor"]}</span>
-                  ) : (
-                    <span className="text-zinc-600">set nickname…</span>
-                  )}
-                </button>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => toggleCursor(!cursorEnabled)}
-                    title={cursorEnabled ? "Disable cursor monitoring" : "Enable cursor monitoring"}
-                    className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                      cursorEnabled ? "bg-emerald-500" : "bg-zinc-600"
+                  <span
+                    className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                      cursorEnabled ? "left-4" : "left-0.5"
                     }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
-                        cursorEnabled ? "left-4" : "left-0.5"
-                      }`}
-                    />
-                  </button>
-                  <button
-                    onClick={() => setSubDetail("cursor")}
-                    title="Cursor details"
-                    className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
-                  >
+                  />
+                </button>
+                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+                  Cursor
+                </span>
+                <button
+                  onClick={() => setSubDetail("cursor")}
+                  title="Cursor details"
+                  className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
+                >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
@@ -549,7 +585,6 @@ export default function SettingsModal({
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                   </button>
-                </div>
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span
@@ -570,17 +605,6 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSubDetail("grok")}
-                  className="flex-1 min-w-0 text-left text-sm truncate"
-                >
-                  {displayNames["grok"] ? (
-                    <span className="text-zinc-200">{displayNames["grok"]}</span>
-                  ) : (
-                    <span className="text-zinc-600">set nickname…</span>
-                  )}
-                </button>
-                <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => toggleGrok(!grokEnabled)}
                     title={grokEnabled ? "Disable Grok Bot monitoring" : "Enable Grok Bot monitoring"}
@@ -594,6 +618,9 @@ export default function SettingsModal({
                       }`}
                     />
                   </button>
+                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+                  Grok Bot
+                </span>
                   <button
                     onClick={() => setSubDetail("grok")}
                     title="Grok Bot details"
@@ -613,7 +640,6 @@ export default function SettingsModal({
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                   </button>
-                </div>
               </div>
 <div className="mt-1 flex items-center gap-2">
                 <span
@@ -634,17 +660,6 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSubDetail("codex")}
-                  className="flex-1 min-w-0 text-left text-sm truncate"
-                >
-                  {displayNames["codex"] ? (
-                    <span className="text-zinc-200">{displayNames["codex"]}</span>
-                  ) : (
-                    <span className="text-zinc-600">set nickname…</span>
-                  )}
-                </button>
-                <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => toggleCodex(!codexEnabled)}
                     title={codexEnabled ? "Disable Codex monitoring" : "Enable Codex monitoring"}
@@ -658,6 +673,9 @@ export default function SettingsModal({
                       }`}
                     />
                   </button>
+                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+                  Codex
+                </span>
                   <button
                     onClick={() => setSubDetail("codex")}
                     title="Codex details"
@@ -677,7 +695,6 @@ export default function SettingsModal({
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                   </button>
-                </div>
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span
@@ -704,17 +721,6 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSubDetail("claude")}
-                  className="flex-1 min-w-0 text-left text-sm truncate"
-                >
-                  {displayNames["claude"] ? (
-                    <span className="text-zinc-200">{displayNames["claude"]}</span>
-                  ) : (
-                    <span className="text-zinc-600">set nickname…</span>
-                  )}
-                </button>
-                <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => toggleClaude(!claudeEnabled)}
                     title={claudeEnabled ? "Disable Claude monitoring" : "Enable Claude monitoring"}
@@ -728,6 +734,9 @@ export default function SettingsModal({
                       }`}
                     />
                   </button>
+                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+                  Claude
+                </span>
                   <button
                     onClick={() => setSubDetail("claude")}
                     title="Claude details"
@@ -747,7 +756,6 @@ export default function SettingsModal({
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                   </button>
-                </div>
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <span

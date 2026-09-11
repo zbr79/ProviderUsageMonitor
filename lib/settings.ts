@@ -6,6 +6,7 @@ export interface Settings {
   grokEnabled: boolean
   codexEnabled: boolean
   claudeEnabled: boolean
+  showProviderNames: boolean
   displayNames: Record<string, string>
   disabledAccounts: string[]
 }
@@ -20,6 +21,7 @@ export async function getSettings(): Promise<Settings> {
       grokEnabled: parsed?.grokEnabled !== false,
       codexEnabled: parsed?.codexEnabled !== false,
       claudeEnabled: parsed?.claudeEnabled !== false,
+      showProviderNames: parsed?.showProviderNames === true,
       displayNames:
         parsed?.displayNames && typeof parsed.displayNames === 'object'
           ? parsed.displayNames
@@ -34,6 +36,7 @@ export async function getSettings(): Promise<Settings> {
       grokEnabled: true,
       codexEnabled: true,
       claudeEnabled: true,
+      showProviderNames: false,
       displayNames: {},
       disabledAccounts: [],
     }
