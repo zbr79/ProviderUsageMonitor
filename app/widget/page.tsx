@@ -407,11 +407,18 @@ export default function Widget() {
           className="flex items-center gap-1.5 mb-1.5 cursor-move"
           onMouseDown={onDragStart}
         >
-          <img
-            src="/opencode.ico"
-            alt="opencode"
-            className="h-3 w-3 shrink-0 rounded-[3px]"
-          />
+          <button
+            onClick={() => copyKey(row.email)}
+            title="Copy key"
+            className="shrink-0 rounded-[3px] p-0.5 hover:bg-white/10 transition-colors"
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <img
+              src="/opencode.ico"
+              alt="copy key"
+              className="h-3 w-3 rounded-[3px]"
+            />
+          </button>
           <span className={`text-[11px] truncate font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
             {showProviderNames ? "OpenCode" : displayNames[row.email] ?? row.email.slice(0, 4)}
           </span>
@@ -424,30 +431,15 @@ export default function Widget() {
               Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
             </span>
           ) : null}
-          <button
-            onClick={() => copyKey(row.email)}
-            title="Copy key"
-            className={`ml-auto p-0.5 rounded transition-colors shrink-0 ${
+          <span
+            className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
               light
-                ? "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/70"
-                : "text-zinc-300 hover:text-zinc-100 hover:bg-white/10"
+                ? "bg-blue-100 text-blue-700 border border-blue-300"
+                : "bg-blue-500/15 text-blue-300 border border-blue-400/30"
             }`}
-            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3 w-3"
-            >
-              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-            </svg>
-          </button>
+            Go
+          </span>
         </div>
         {row.error ? (
           <div className="text-[10px] text-red-400">unavailable</div>
