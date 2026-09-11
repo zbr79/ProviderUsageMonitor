@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenCode API — Multi-Provider Usage Monitor
 
-## Getting Started
+A local dashboard + always-on-top floating desktop widget that tracks AI subscription usage across **five providers**:
 
-First, run the development server:
+| Provider | What's shown | Data source |
+| --- | --- | --- |
+| **OpenCode Go** | Rolling / Weekly / Monthly usage per account, reset countdowns, DeepSeek peak-hour timer | `opencode.ai/zen/go/v1/usage` (API key) |
+| **Cursor** | First Party & API usage, plan badge, billing-cycle reset | Cursor's local auth token → `api2.cursor.sh` |
+| **Grok Bot** | Weekly usage %, plan badge, reset countdown | Cursor sand usage endpoint (`grok-bot` client) |
+| **Codex** | Usage %, plan badge (Free/Plus/Pro), reset countdown | Codex CLI auth → ChatGPT `wham/usage` |
+| **Claude** | Subscription status badge (Free / plan) | Claude Code local credentials |
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+No accounts or passwords leave your machine except the API calls each provider's own app makes.
+
+---
+
+## Architecture
+
+```
+Next.js app (web dashboard)          Electron widget (desktop/)
+├── /                dashboard        ├── frameless, always-on-top
+├── /widget          compact panel    ├── follows your theme (adaptive background)
+├── /settings        settings modal   ├── draggable, expandable
+└── /api/*           usage endpoints  └── right-click menu (expand, refresh, settings, quit)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- The **web dashboard** and **widget** both read from the same local API routes.
+- The widget runs on port **3100** — deliberately not 3000 so it can coexist with other local dev servers.
+- Every provider integration lives in `lib/`: `opencode.ts`, `cursor.ts`, `codex.ts`, `claude.ts`, `settings.ts`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Requirements
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Node.js 20+** (built and tested on Node 24)
+- Windows (the widget uses Electron; the web app runs anywhere)
+- Optional: Cursor, Codex CLI, Claude Code installed locally — each provider is auto-detected
 
-## Learn More
+## Setup
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# 1. Install dependencies
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 2. (Widget only) install Electron deps
+cd desktop && npm install && cd ..
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 3. Build and run
+npm run build
+npm run start        # serves the dashboard on http://localhost:3100
+```
 
-## Deploy on Vercel
+### Desktop shortcuts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Two shortcuts are created on the Desktop (see `app-launcher.vbs` / `desktop/widget-launcher.vbs`):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **OpenCode App** — starts the server hidden and opens the dashboard in your browser
+- **OpenCode Widget** — starts the floating panel
+
+`start-app.cmd` handles first-run builds and port checks.
+
+## Accounts & Secrets
+
+Provider credentials **never live in this repo**:
+
+- `data/accounts.json` — OpenCode API accounts (`email` + `sk-...` key). **Gitignored.**
+- `data/settings.json` — toggles, display names, disabled accounts. **Gitignored.**
+- `data/accounts.example.json` — committed template showing the format
+
+Cursor / Codex / Claude read their tokens directly from each app's local credential store at request time; nothing is copied into this project.
+
+## Features
+
+### Widget
+- Compact panel showing the active account + all providers; click expand for the full list
+- **Adaptive theme** — samples screen brightness every second and fades between dark/light card styles
+- **Change detection** — when an account's usage percent moves, a green ▲ appears for 20s and the most recently used account floats to the top
+- **Reset countdowns** — each bar shows time until its window resets (`5d 7h 45m`); monthly resets always visible
+- **Status badges** — `Go` (OpenCode), plan names for Cursor/Codex, `Free` for Claude
+- **Copy key** — click the OpenCode icon on a card to copy that account's API key
+- Right-click menu: expand/collapse, refresh, settings, quit
+
+### Settings (right-click widget → Settings)
+- Per-provider tabs with on/off toggles, nickname editing, and account details
+- **Show provider names** master toggle — display `OpenCode / Cursor / Grok Bot / Codex / Claude` instead of nicknames on all cards
+- Add / remove / disable OpenCode accounts without touching files
+
+### Ranking rules
+1. Accounts at 100% on **monthly or weekly** usage sink to the bottom (red glow)
+2. Among exhausted accounts, the one resetting soonest is ranked first
+3. Otherwise, the most recently used account floats to the top (green glow)
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Development server on port 3100 |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build on port 3100 |
+| `npm run lint` | ESLint |
+
+## Project layout
+
+```
+app/
+├── api/            # usage endpoints (opencode, cursor, codex, claude, settings, accounts, key)
+├── components/     # SettingsModal, toast system
+├── page.tsx        # browser dashboard
+├── settings/       # settings page (widget overlay)
+└── widget/         # compact floating panel UI
+desktop/            # Electron wrapper (main.js, preload, launchers)
+lib/                # provider integrations + settings store
+data/               # local secrets (gitignored)
+```
