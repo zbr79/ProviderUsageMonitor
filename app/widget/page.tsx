@@ -209,6 +209,7 @@ export default function Widget() {
   const [claudeEnabled, setClaudeEnabled] = useState(true);
   const [claude, setClaude] = useState<ClaudeUsage | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const [showProviderNames, setShowProviderNames] = useState(false);
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
 
@@ -228,6 +229,24 @@ export default function Widget() {
 
   useEffect(() => {
     (window as any).widget?.onToggleExpand?.(() => setExpanded((e) => !e));
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/settings", { cache: "no-store" });
+        const s = await res.json();
+        setDisplayNames(s.settings?.displayNames ?? {});
+        setShowProviderNames(s.settings?.showProviderNames === true);
+        setCursorEnabled(s.settings?.cursorEnabled !== false);
+        setGrokEnabled(s.settings?.grokEnabled !== false);
+        setCodexEnabled(s.settings?.codexEnabled !== false);
+        setClaudeEnabled(s.settings?.claudeEnabled !== false);
+      } catch {
+        // ignore transient errors
+      }
+    }, 5000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -290,6 +309,7 @@ export default function Widget() {
       setCursorEnabled(sjson.settings?.cursorEnabled !== false);
       setGrokEnabled(sjson.settings?.grokEnabled !== false);
       setDisplayNames(sjson.settings?.displayNames ?? {});
+      setShowProviderNames(sjson.settings?.showProviderNames === true);
       setCursorError(!!cjson.error);
       if (!cjson.error) setCursor(cjson.usage);
       if (sjson.settings?.cursorEnabled === false) {
@@ -393,7 +413,7 @@ export default function Widget() {
             className="h-3 w-3 shrink-0 rounded-[3px]"
           />
           <span className={`text-[11px] truncate font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
-            {displayNames[row.email] ?? row.email.slice(0, 4)}
+            {showProviderNames ? "OpenCode" : displayNames[row.email] ?? row.email.slice(0, 4)}
           </span>
           {withControls && peakInfo.active && peakInfo.endAt ? (
             <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-red-600" : "text-red-300"}`}>
@@ -515,7 +535,7 @@ export default function Widget() {
             className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}
             title={cursor?.accountName ?? ""}
           >
-            {displayNames["cursor"] ?? cursor?.accountName ?? "crsr"}
+            {showProviderNames ? "Cursor" : displayNames["cursor"] ?? cursor?.accountName ?? "crsr"}
           </span>
           {cursor?.planName && (
             <span
@@ -590,7 +610,7 @@ export default function Widget() {
             className="h-3 w-3 shrink-0 rounded-[3px]"
           />
           <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
-            {displayNames["grok"] ?? "Grok Bot"}
+            {showProviderNames ? "Grok Bot" : displayNames["grok"] ?? "Grok Bot"}
           </span>
           {cursor?.planName && (
             <span
@@ -650,7 +670,7 @@ export default function Widget() {
             className={`h-3 w-3 shrink-0 ${light ? "invert" : ""}`}
           />
           <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
-            {displayNames["codex"] ?? "Codex"}
+            {showProviderNames ? "Codex" : displayNames["codex"] ?? "Codex"}
           </span>
           {codex?.planType && (
             <span
@@ -729,7 +749,7 @@ export default function Widget() {
             className="h-3 w-3 shrink-0 rounded-[3px]"
           />
           <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
-            {displayNames["claude"] ?? "Claude"}
+            {showProviderNames ? "Claude" : displayNames["claude"] ?? "Claude"}
           </span>
           <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
             {badge}
