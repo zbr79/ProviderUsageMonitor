@@ -36,11 +36,3 @@ export const toastSuccess = (message: string) => {
 export const toastError = (message: string) => {
   showToast(() => toast.error(message));
 };
-
-export const toastInfo = (message: string) => {
-  showToast(() => toast(message));
-};
-
-export const toastWarning = (message: string) => {
-  showToast(() => toast.error(message));
-};
