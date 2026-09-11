@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
     typeof body?.cursorEnabled === 'boolean' ? body.cursorEnabled : current.cursorEnabled
   const grokEnabled =
     typeof body?.grokEnabled === 'boolean' ? body.grokEnabled : current.grokEnabled
+  const codexEnabled =
+    typeof body?.codexEnabled === 'boolean' ? body.codexEnabled : current.codexEnabled
+  const claudeEnabled =
+    typeof body?.claudeEnabled === 'boolean' ? body.claudeEnabled : current.claudeEnabled
   const displayNames =
     body?.displayNames && typeof body.displayNames === 'object'
       ? body.displayNames
@@ -22,6 +26,13 @@ export async function POST(req: NextRequest) {
   const disabledAccounts = Array.isArray(body?.disabledAccounts)
     ? body.disabledAccounts.map((e: unknown) => String(e).toLowerCase())
     : current.disabledAccounts
-  await saveSettings({ cursorEnabled, grokEnabled, displayNames, disabledAccounts })
+  await saveSettings({
+    cursorEnabled,
+    grokEnabled,
+    codexEnabled,
+    claudeEnabled,
+    displayNames,
+    disabledAccounts,
+  })
   return Response.json({ ok: true })
 }
