@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenCode API",
-  description: "Usage dashboard for OpenCode Go API accounts",
+  title: "Provider Usage Monitor",
+  description: "Usage monitor for OpenCode Go, Cursor, Grok Bot, Codex and Claude",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
