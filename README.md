@@ -90,7 +90,6 @@ Cursor / Codex / Claude read their tokens directly from each app's local credent
 | `npm run dev` | Development server on port 3100 |
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build on port 3100 |
-| `npm run lint` | ESLint |
 
 ## Project layout
 
