@@ -4,6 +4,8 @@ import path from 'path'
 export interface Settings {
   cursorEnabled: boolean
   grokEnabled: boolean
+  codexEnabled: boolean
+  claudeEnabled: boolean
   displayNames: Record<string, string>
   disabledAccounts: string[]
 }
@@ -16,6 +18,8 @@ export async function getSettings(): Promise<Settings> {
     return {
       cursorEnabled: parsed?.cursorEnabled !== false,
       grokEnabled: parsed?.grokEnabled !== false,
+      codexEnabled: parsed?.codexEnabled !== false,
+      claudeEnabled: parsed?.claudeEnabled !== false,
       displayNames:
         parsed?.displayNames && typeof parsed.displayNames === 'object'
           ? parsed.displayNames
@@ -25,7 +29,14 @@ export async function getSettings(): Promise<Settings> {
         : [],
     }
   } catch {
-    return { cursorEnabled: true, grokEnabled: true, displayNames: {}, disabledAccounts: [] }
+    return {
+      cursorEnabled: true,
+      grokEnabled: true,
+      codexEnabled: true,
+      claudeEnabled: true,
+      displayNames: {},
+      disabledAccounts: [],
+    }
   }
 }
 

@@ -35,6 +35,27 @@ interface CursorUsage {
   grokResetAt: string | null;
 }
 
+interface CodexUsage {
+  email: string | null;
+  planType: string | null;
+  usedPercent: number | null;
+  limitWindowSeconds: number | null;
+  resetAt: string | null;
+  creditsBalance: number | null;
+  limitReached: boolean;
+}
+
+interface ClaudeUsage {
+  email: string | null;
+  displayName: string | null;
+  signedIn: boolean;
+  subscribed: boolean;
+  subscriptionType: string | null;
+  billingType: string | null;
+  rateLimitTier: string | null;
+  orgUuid: string | null;
+}
+
 const POLL_MS = 60_000;
 
 function windowColor(w: UsageWindow): string {
@@ -183,6 +204,10 @@ export default function Widget() {
   const [cursorError, setCursorError] = useState(false);
   const [cursorEnabled, setCursorEnabled] = useState(true);
   const [grokEnabled, setGrokEnabled] = useState(true);
+  const [codexEnabled, setCodexEnabled] = useState(true);
+  const [codex, setCodex] = useState<CodexUsage | null>(null);
+  const [claudeEnabled, setClaudeEnabled] = useState(true);
+  const [claude, setClaude] = useState<ClaudeUsage | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
@@ -246,14 +271,22 @@ export default function Widget() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [usageRes, cursorRes, settingsRes] = await Promise.all([
+      const [usageRes, cursorRes, settingsRes, codexRes, claudeRes] = await Promise.all([
         fetch("/api/usage", { cache: "no-store" }),
         fetch("/api/cursor", { cache: "no-store" }),
         fetch("/api/settings", { cache: "no-store" }),
+        fetch("/api/codex", { cache: "no-store" }),
+        fetch("/api/claude", { cache: "no-store" }),
       ]);
       const json = await usageRes.json();
       const cjson = await cursorRes.json();
       const sjson = await settingsRes.json();
+      const xjson = await codexRes.json();
+      const ljson = await claudeRes.json();
+      setCodexEnabled(sjson.settings?.codexEnabled !== false);
+      setCodex(xjson.usage ?? null);
+      setClaudeEnabled(sjson.settings?.claudeEnabled !== false);
+      setClaude(ljson.usage ?? null);
       setCursorEnabled(sjson.settings?.cursorEnabled !== false);
       setGrokEnabled(sjson.settings?.grokEnabled !== false);
       setDisplayNames(sjson.settings?.displayNames ?? {});
@@ -559,6 +592,17 @@ export default function Widget() {
           <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
             {displayNames["grok"] ?? "Grok Bot"}
           </span>
+          {cursor?.planName && (
+            <span
+              className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                light
+                  ? "bg-blue-100 text-blue-700 border border-blue-300"
+                  : "bg-blue-500/15 text-blue-300 border border-blue-400/30"
+              }`}
+            >
+              {cursor.planName}
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
           <MiniBar
@@ -575,6 +619,132 @@ export default function Widget() {
             Resets {resetFmt(cursor.grokResetAt)}
           </div>
         )}
+      </div>
+    );
+  };
+
+  const renderCodexCard = () => {
+    if (!codexEnabled) return null;
+    const pct = codex?.usedPercent ?? 0;
+    const exhausted = codex?.limitReached === true || pct >= 100;
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
+      light ? "bg-zinc-200" : "bg-zinc-900"
+    } ${
+      exhausted
+        ? light
+          ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+          : "border border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+        : light
+          ? "border border-zinc-400/50"
+          : "border border-white/15"
+    }`;
+    return (
+      <div className={cardClass}>
+        <div
+          className="flex items-center gap-1.5 mb-1.5 cursor-move"
+          onMouseDown={onDragStart}
+        >
+          <img
+            src="/openai.png"
+            alt="codex"
+            className={`h-3 w-3 shrink-0 ${light ? "invert" : ""}`}
+          />
+          <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
+            {displayNames["codex"] ?? "Codex"}
+          </span>
+          {codex?.planType && (
+            <span
+              className={`ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                codex.planType.toLowerCase() === "free"
+                  ? light
+                    ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                    : "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
+                  : light
+                    ? "bg-blue-100 text-blue-700 border border-blue-300"
+                    : "bg-blue-500/15 text-blue-300 border border-blue-400/30"
+              }`}
+            >
+              {codex.planType.charAt(0).toUpperCase() + codex.planType.slice(1)}
+            </span>
+          )}
+        </div>
+        {codex ? (
+          <>
+            <div className="flex gap-2">
+              <MiniBar
+                label="Usage"
+                w={{ status: "ok", percent: pct, resetsAt: "" }}
+                dimmed={false}
+                increased={false}
+                light={light}
+                reset={null}
+              />
+            </div>
+            {codex.resetAt && (
+              <div className={`text-[9px] leading-3 mt-1 transition-colors duration-700 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+                Resets {resetFmt(codex.resetAt)}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-[10px] text-zinc-400">not signed in or unavailable</div>
+        )}
+      </div>
+    );
+  };
+
+  const renderClaudeCard = () => {
+    if (!claudeEnabled) return null;
+    const badge = !claude
+      ? "n/a"
+      : !claude.signedIn
+        ? "signed out"
+        : !claude.subscribed
+          ? "Free"
+          : claude.subscriptionType ?? "subscribed";
+    const badgeClass =
+      badge === "Free"
+        ? light
+          ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+          : "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
+        : badge === "n/a" || badge === "signed out"
+          ? light
+            ? "bg-zinc-200 text-zinc-500 border border-zinc-300"
+            : "bg-zinc-500/15 text-zinc-400 border border-zinc-500/30"
+          : light
+            ? "bg-blue-100 text-blue-700 border border-blue-300"
+            : "bg-blue-500/15 text-blue-300 border border-blue-400/30";
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
+      light ? "bg-zinc-200" : "bg-zinc-900"
+    } ${light ? "border border-zinc-400/50" : "border border-white/15"}`;
+    return (
+      <div className={cardClass}>
+        <div
+          className="flex items-center gap-1.5 mb-1.5 cursor-move"
+          onMouseDown={onDragStart}
+        >
+          <img
+            src="/claude.ico"
+            alt="claude"
+            className="h-3 w-3 shrink-0 rounded-[3px]"
+          />
+          <span className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
+            {displayNames["claude"] ?? "Claude"}
+          </span>
+          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
+            {badge}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <MiniBar
+            label="Usage"
+            w={{ status: "ok", percent: 0, resetsAt: "" }}
+            dimmed={!claude?.subscribed}
+            increased={false}
+            light={light}
+            reset={null}
+          />
+        </div>
       </div>
     );
   };
@@ -599,12 +769,16 @@ export default function Widget() {
               {sortedRows?.map((row, i) => renderCard(row, i === 0))}
               {renderCursorCard()}
               {renderGrokCard()}
+              {renderCodexCard()}
+              {renderClaudeCard()}
             </>
           ) : (
             <>
               {activeRow ? renderCard(activeRow, true) : null}
               {renderCursorCard()}
               {renderGrokCard()}
+              {renderCodexCard()}
+              {renderClaudeCard()}
             </>
           )}
       </div>

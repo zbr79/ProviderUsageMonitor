@@ -7,7 +7,7 @@ interface AccountRow {
   email: string;
 }
 
-type Tab = "opencode" | "cursor" | "grok";
+type Tab = "opencode" | "cursor" | "grok" | "codex" | "claude";
 
 export default function SettingsModal({
   onClose,
@@ -20,7 +20,13 @@ export default function SettingsModal({
   const [accounts, setAccounts] = useState<AccountRow[] | null>(null);
   const [cursorEnabled, setCursorEnabled] = useState(true);
   const [grokEnabled, setGrokEnabled] = useState(true);
-  const [subDetail, setSubDetail] = useState<"cursor" | "grok" | null>(null);
+  const [codexEnabled, setCodexEnabled] = useState(true);
+  const [codexAccount, setCodexAccount] = useState<string | null>(null);
+  const [codexPlan, setCodexPlan] = useState<string | null>(null);
+  const [claudeEnabled, setClaudeEnabled] = useState(true);
+  const [claudeAccount, setClaudeAccount] = useState<string | null>(null);
+  const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
+  const [subDetail, setSubDetail] = useState<"cursor" | "grok" | "codex" | "claude" | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [disabledAccounts, setDisabledAccounts] = useState<string[]>([]);
   const [cursorAccount, setCursorAccount] = useState<string | null>(null);
@@ -43,6 +49,8 @@ export default function SettingsModal({
     setAccounts((u.accounts ?? []).map((a: AccountRow) => ({ email: a.email })));
     setCursorEnabled(s.settings?.cursorEnabled !== false);
     setGrokEnabled(s.settings?.grokEnabled !== false);
+    setCodexEnabled(s.settings?.codexEnabled !== false);
+    setClaudeEnabled(s.settings?.claudeEnabled !== false);
     setDisplayNames(s.settings?.displayNames ?? {});
     setDisabledAccounts(s.settings?.disabledAccounts ?? []);
     fetch("/api/cursor", { cache: "no-store" })
@@ -50,6 +58,28 @@ export default function SettingsModal({
       .then((c) => {
         setCursorAccount(c.usage?.accountName ?? null);
         setCursorPlan(c.usage?.planName ?? null);
+      })
+      .catch(() => {});
+    fetch("/api/codex", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((c) => {
+        setCodexAccount(c.usage?.email ?? null);
+        setCodexPlan(c.usage?.planType ?? null);
+      })
+      .catch(() => {});
+    fetch("/api/claude", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((c) => {
+        setClaudeAccount(c.usage?.email ?? null);
+        setClaudeStatus(
+          c.usage == null
+            ? "unavailable"
+            : !c.usage.signedIn
+              ? "not signed in"
+              : c.usage.subscribed
+                ? c.usage.subscriptionType ?? "subscribed"
+                : "not subscribed",
+        );
       })
       .catch(() => {});
   };
@@ -142,6 +172,48 @@ export default function SettingsModal({
     } catch {
       toastError("Save failed");
       setDisabledAccounts(disabledAccounts);
+    }
+  };
+
+  const toggleClaude = async (enabled: boolean) => {
+    setClaudeEnabled(enabled);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claudeEnabled: enabled }),
+      });
+      if (res.ok) {
+        toastSuccess(enabled ? "Claude monitoring on" : "Claude monitoring off");
+        onChanged();
+      } else {
+        toastError("Save failed");
+        setClaudeEnabled(!enabled);
+      }
+    } catch {
+      toastError("Save failed");
+      setClaudeEnabled(!enabled);
+    }
+  };
+
+  const toggleCodex = async (enabled: boolean) => {
+    setCodexEnabled(enabled);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codexEnabled: enabled }),
+      });
+      if (res.ok) {
+        toastSuccess(enabled ? "Codex monitoring on" : "Codex monitoring off");
+        onChanged();
+      } else {
+        toastError("Save failed");
+        setCodexEnabled(!enabled);
+      }
+    } catch {
+      toastError("Save failed");
+      setCodexEnabled(!enabled);
     }
   };
 
@@ -282,6 +354,12 @@ export default function SettingsModal({
           </button>
           <button className={tabClass("grok")} onClick={() => setTab("grok")}>
             Grok Bot
+          </button>
+          <button className={tabClass("codex")} onClick={() => setTab("codex")}>
+            Codex
+          </button>
+          <button className={tabClass("claude")} onClick={() => setTab("claude")}>
+            Claude
           </button>
         </div>
 
@@ -488,7 +566,7 @@ export default function SettingsModal({
               </div>
             </div>
           </div>
-        ) : (
+        ) : tab === "grok" ? (
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
@@ -537,8 +615,160 @@ export default function SettingsModal({
                   </button>
                 </div>
               </div>
-              <div className="mt-1 text-xs text-zinc-500 truncate" title={cursorAccount ?? ""}>
-                {cursorAccount ?? "account unavailable"}
+<div className="mt-1 flex items-center gap-2">
+                <span
+                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
+                  title={cursorAccount ?? ""}
+                >
+                  {cursorAccount ?? "account unavailable"}
+                </span>
+                {cursorPlan && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
+                    {cursorPlan}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : tab === "codex" ? (
+          <div className="space-y-2">
+            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSubDetail("codex")}
+                  className="flex-1 min-w-0 text-left text-sm truncate"
+                >
+                  {displayNames["codex"] ? (
+                    <span className="text-zinc-200">{displayNames["codex"]}</span>
+                  ) : (
+                    <span className="text-zinc-600">set nickname…</span>
+                  )}
+                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => toggleCodex(!codexEnabled)}
+                    title={codexEnabled ? "Disable Codex monitoring" : "Enable Codex monitoring"}
+                    className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                      codexEnabled ? "bg-emerald-500" : "bg-zinc-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                        codexEnabled ? "left-4" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setSubDetail("codex")}
+                    title="Codex details"
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3.5 w-3.5"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span
+                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
+                  title={codexAccount ?? ""}
+                >
+                  {codexAccount ?? "account unavailable"}
+                </span>
+                {codexPlan && (
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${
+                      codexPlan.toLowerCase() === "free"
+                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
+                        : "bg-blue-500/15 text-blue-300 border-blue-400/30"
+                    }`}
+                  >
+                    {codexPlan.charAt(0).toUpperCase() + codexPlan.slice(1)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSubDetail("claude")}
+                  className="flex-1 min-w-0 text-left text-sm truncate"
+                >
+                  {displayNames["claude"] ? (
+                    <span className="text-zinc-200">{displayNames["claude"]}</span>
+                  ) : (
+                    <span className="text-zinc-600">set nickname…</span>
+                  )}
+                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => toggleClaude(!claudeEnabled)}
+                    title={claudeEnabled ? "Disable Claude monitoring" : "Enable Claude monitoring"}
+                    className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                      claudeEnabled ? "bg-emerald-500" : "bg-zinc-600"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+                        claudeEnabled ? "left-4" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setSubDetail("claude")}
+                    title="Claude details"
+                    className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-3.5 w-3.5"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span
+                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
+                  title={claudeAccount ?? ""}
+                >
+                  {claudeAccount ?? "account unavailable"}
+                </span>
+                {claudeStatus && (
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${
+                      claudeStatus === "not subscribed"
+                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
+                        : claudeStatus === "unavailable" || claudeStatus === "not signed in"
+                          ? "bg-zinc-500/15 text-zinc-400 border-zinc-500/30"
+                          : "bg-blue-500/15 text-blue-300 border-blue-400/30"
+                    }`}
+                  >
+                    {claudeStatus === "not subscribed" ? "Free" : claudeStatus}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -699,7 +929,13 @@ export default function SettingsModal({
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-zinc-100">
-                {subDetail === "cursor" ? "Cursor" : "Grok Bot"}
+                {subDetail === "cursor"
+                  ? "Cursor"
+                  : subDetail === "grok"
+                    ? "Grok Bot"
+                    : subDetail === "codex"
+                      ? "Codex"
+                      : "Claude"}
               </h3>
               <button
                 onClick={() => setSubDetail(null)}
@@ -733,15 +969,29 @@ export default function SettingsModal({
               </div>
               <div>
                 <div className="text-xs text-zinc-400 mb-1">Account</div>
-                <div className="text-sm text-zinc-200 truncate" title={cursorAccount ?? ""}>
-                  {cursorAccount ?? "unavailable"}
+                <div className="text-sm text-zinc-200 truncate" title={(subDetail === "codex" ? codexAccount : subDetail === "claude" ? claudeAccount : cursorAccount) ?? ""}>
+                  {(subDetail === "codex" ? codexAccount : subDetail === "claude" ? claudeAccount : cursorAccount) ?? "unavailable"}
                 </div>
               </div>
+              {subDetail === "claude" && claudeStatus && (
+                <div>
+                  <div className="text-xs text-zinc-400 mb-1">Subscription</div>
+                  <div className="text-sm text-zinc-200">{claudeStatus}</div>
+                </div>
+              )}
               {subDetail === "cursor" && cursorPlan && (
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Plan</div>
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
                     {cursorPlan}
+                  </span>
+                </div>
+              )}
+              {subDetail === "codex" && codexPlan && (
+                <div>
+                  <div className="text-xs text-zinc-400 mb-1">Plan</div>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
+                    {codexPlan}
                   </span>
                 </div>
               )}
