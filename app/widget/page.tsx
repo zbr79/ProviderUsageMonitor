@@ -19,6 +19,7 @@ interface AccountRow {
   email: string;
   usage: Usage | null;
   prev: Usage | null;
+  enabled: boolean;
   error: string | null;
   lastChangeAt: number | null;
   lastChangeDetail: string | null;
@@ -367,6 +368,9 @@ export default function Widget() {
     if (!rows) return null;
     const lastChanged = (r: AccountRow) => lastChange.current.get(r.email)?.at ?? 0;
     return [...rows].sort((a, b) => {
+      const da = a.enabled === false;
+      const db = b.enabled === false;
+      if (da !== db) return da ? 1 : -1;
       const ea = isExhausted(a);
       const eb = isExhausted(b);
       if (ea !== eb) return ea ? 1 : -1;
@@ -389,7 +393,8 @@ export default function Widget() {
   };
 
   const renderCard = (row: AccountRow, withControls: boolean) => {
-    const isInUse = sortedRows?.[0]?.email === row.email;
+    const disabled = row.enabled === false;
+    const isInUse = !disabled && sortedRows?.[0]?.email === row.email;
     const exhausted = isExhausted(row);
     const showInc = (win: string) => {
       const at = increaseAt.current.get(`${row.email}:${win}`);
@@ -401,17 +406,19 @@ export default function Widget() {
         className={`rounded-lg p-2 transition-colors duration-700 ${
           light ? "bg-zinc-200" : "bg-zinc-900"
         } ${
-          exhausted
-            ? light
-              ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
-              : "border border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
-            : isInUse
+          disabled
+            ? `${light ? "border border-zinc-300/70" : "border border-white/10"} opacity-55`
+            : exhausted
               ? light
-                ? "border border-emerald-500/80 shadow-[0_0_14px_rgba(16,185,129,0.45)]"
-                : "border border-emerald-400/70 shadow-[0_0_14px_rgba(16,185,129,0.45)]"
-              : light
-                ? "border border-zinc-400/50"
-                : "border border-white/15"
+                ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+                : "border border-red-400/70 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
+              : isInUse
+                ? light
+                  ? "border border-emerald-500/80 shadow-[0_0_14px_rgba(16,185,129,0.45)]"
+                  : "border border-emerald-400/70 shadow-[0_0_14px_rgba(16,185,129,0.45)]"
+                : light
+                  ? "border border-zinc-400/50"
+                  : "border border-white/15"
         }`}
       >
         <div

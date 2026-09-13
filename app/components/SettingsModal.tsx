@@ -67,7 +67,7 @@ export default function SettingsModal({
 
   const refresh = async () => {
     const [u, s] = await Promise.all([
-      fetch("/api/usage?all=1", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/usage", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
     ]);
     setAccounts((u.accounts ?? []).map((a: AccountRow) => ({ email: a.email })));
