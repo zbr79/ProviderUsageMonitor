@@ -28,6 +28,7 @@ export default function SettingsModal({
   const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
   const [showProviderNames, setShowProviderNames] = useState(false);
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">("auto");
+  const [mainTab, setMainTab] = useState<"system" | "accounts">("accounts");
   const [subDetail, setSubDetail] = useState<"cursor" | "grok" | "codex" | "claude" | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [disabledAccounts, setDisabledAccounts] = useState<string[]>([]);
@@ -359,6 +360,13 @@ export default function SettingsModal({
         : "border-transparent text-zinc-500 hover:text-zinc-300"
     }`;
 
+  const mainTabClass = (t: "system" | "accounts") =>
+    `px-0.5 pb-2 pt-1 -mb-px text-sm border-b-2 transition-colors ${
+      mainTab === t
+        ? "border-emerald-400 text-zinc-100 font-medium"
+        : "border-transparent text-zinc-500 hover:text-zinc-300"
+    }`;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -405,75 +413,94 @@ export default function SettingsModal({
           </button>
         </div>
 
-        <div className="flex items-center justify-between px-5 pb-3 mb-3 border-b border-zinc-800">
-          <div>
-            <div className="text-sm font-medium text-zinc-200">Show provider names</div>
-            <div className="text-xs text-zinc-500">
-              Display provider names on widget cards instead of nicknames
-            </div>
-          </div>
+        <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">
           <button
-            onClick={() => toggleProviderNames(!showProviderNames)}
-            className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
-              showProviderNames ? "bg-emerald-500" : "bg-zinc-600"
-            }`}
+            className={mainTabClass("system")}
+            onClick={() => setMainTab("system")}
           >
-            <span
-              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-                showProviderNames ? "left-5" : "left-0.5"
-              }`}
-            />
+            System Settings
+          </button>
+          <button
+            className={mainTabClass("accounts")}
+            onClick={() => setMainTab("accounts")}
+          >
+            Account Management
           </button>
         </div>
 
-        <div className="flex items-center justify-between px-5 pb-3 mb-3 border-b border-zinc-800">
-          <div>
-            <div className="text-sm font-medium text-zinc-200">Widget theme</div>
-            <div className="text-xs text-zinc-500">
-              Auto follows screen brightness (uses CPU); Light/Dark are static
+        {mainTab === "system" ? (
+          <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5 space-y-2">
+            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
+              <div>
+                <div className="text-sm font-medium text-zinc-200">Widget theme</div>
+                <div className="text-xs text-zinc-500">
+                  Auto follows screen brightness (uses CPU); Light/Dark are static
+                </div>
+              </div>
+              <div className="flex rounded-lg overflow-hidden border border-zinc-700 shrink-0">
+                {(["auto", "light", "dark"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setTheme(m)}
+                    className={`px-2.5 py-1 text-xs capitalize transition-colors ${
+                      themeMode === m
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="flex rounded-lg overflow-hidden border border-zinc-700 shrink-0">
-            {(["auto", "light", "dark"] as const).map((m) => (
+
+            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
+              <div>
+                <div className="text-sm font-medium text-zinc-200">Show provider names</div>
+                <div className="text-xs text-zinc-500">
+                  Display provider names on widget cards instead of nicknames
+                </div>
+              </div>
               <button
-                key={m}
-                onClick={() => setTheme(m)}
-                className={`px-2.5 py-1 text-xs capitalize transition-colors ${
-                  themeMode === m
-                    ? "bg-zinc-100 text-zinc-900"
-                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                onClick={() => toggleProviderNames(!showProviderNames)}
+                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
+                  showProviderNames ? "bg-emerald-500" : "bg-zinc-600"
                 }`}
               >
-                {m}
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
+                    showProviderNames ? "left-5" : "left-0.5"
+                  }`}
+                />
               </button>
-            ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">
+              <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
+                <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
+                OpenCode
+              </button>
+              <button className={tabClass("cursor")} onClick={() => setTab("cursor")}>
+                <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
+                Cursor
+              </button>
+              <button className={tabClass("grok")} onClick={() => setTab("grok")}>
+                <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
+                Grok Bot
+              </button>
+              <button className={tabClass("codex")} onClick={() => setTab("codex")}>
+                <img src="/openai.png" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
+                Codex
+              </button>
+              <button className={tabClass("claude")} onClick={() => setTab("claude")}>
+                <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
+                Claude
+              </button>
+            </div>
 
-        <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">
-          <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
-            <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
-            OpenCode
-          </button>
-          <button className={tabClass("cursor")} onClick={() => setTab("cursor")}>
-            <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
-            Cursor
-          </button>
-          <button className={tabClass("grok")} onClick={() => setTab("grok")}>
-            <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
-            Grok Bot
-          </button>
-          <button className={tabClass("codex")} onClick={() => setTab("codex")}>
-            <img src="/openai.png" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
-            Codex
-          </button>
-          <button className={tabClass("claude")} onClick={() => setTab("claude")}>
-            <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
-            Claude
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5">
+            <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5">
         {tab === "opencode" ? (
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -867,7 +894,9 @@ export default function SettingsModal({
             </div>
           </div>
         )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
       {detailEmail && (
         <div
