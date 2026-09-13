@@ -41,6 +41,8 @@ export default function SettingsModal({
   const [newKeyValue, setNewKeyValue] = useState("");
   const [keyBusy, setKeyBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
 
   const refresh = async () => {
     const [u, s] = await Promise.all([
@@ -142,6 +144,8 @@ export default function SettingsModal({
         body: JSON.stringify({ cursorEnabled, displayNames: next }),
       });
       if (res.ok) {
+        setSavedFlash(key);
+        setTimeout(() => setSavedFlash((k) => (k === key ? null : k)), 1500);
         toastSuccess("Display name saved");
         onChanged();
       } else {
@@ -328,11 +332,35 @@ export default function SettingsModal({
   };
 
   const tabClass = (t: Tab) =>
-    `px-3 py-1.5 text-sm rounded-lg ${
+    `flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg ${
       tab === t
         ? "bg-zinc-100 text-zinc-900"
         : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
     }`;
+
+  const anyAccountEnabled =
+    accounts != null &&
+    accounts.some((a) => !disabledAccounts.includes(a.email.toLowerCase()));
+
+  const statusDot = (on: boolean) => (
+    <span
+      className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+        on ? "bg-emerald-500" : "bg-zinc-600"
+      }`}
+    />
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (editKey) setEditKey(false);
+      else if (subDetail) setSubDetail(null);
+      else if (detailEmail) setDetailEmail(null);
+      else onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editKey, subDetail, detailEmail, onClose]);
 
   return (
     <div
@@ -391,18 +419,28 @@ export default function SettingsModal({
 
         <div className="flex gap-1 px-5 mb-3">
           <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
+            {statusDot(anyAccountEnabled)}
+            <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             OpenCode
           </button>
           <button className={tabClass("cursor")} onClick={() => setTab("cursor")}>
+            {statusDot(cursorEnabled)}
+            <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Cursor
           </button>
           <button className={tabClass("grok")} onClick={() => setTab("grok")}>
+            {statusDot(grokEnabled)}
+            <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Grok Bot
           </button>
           <button className={tabClass("codex")} onClick={() => setTab("codex")}>
+            {statusDot(codexEnabled)}
+            <img src="/openai.png" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Codex
           </button>
           <button className={tabClass("claude")} onClick={() => setTab("claude")}>
+            {statusDot(claudeEnabled)}
+            <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Claude
           </button>
         </div>
@@ -516,26 +554,46 @@ export default function SettingsModal({
                           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                         </svg>
                       </button>
-                      <button
-                        onClick={() => removeAccount(a.email)}
-                        title="Remove account"
-                        className="p-1 rounded text-zinc-400 hover:text-red-300 hover:bg-zinc-700 shrink-0"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-3.5 w-3.5"
+                      {confirmRemove === a.email ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              removeAccount(a.email);
+                              setConfirmRemove(null);
+                            }}
+                            className="text-[10px] px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white shrink-0"
+                          >
+                            Remove
+                          </button>
+                          <button
+                            onClick={() => setConfirmRemove(null)}
+                            className="text-[10px] px-2 py-1 rounded text-zinc-300 hover:bg-zinc-700 shrink-0"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmRemove(a.email)}
+                          title="Remove account"
+                          className="p-1 rounded text-zinc-400 hover:text-red-300 hover:bg-zinc-700 shrink-0"
                         >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        </svg>
-                      </button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-3.5 w-3.5"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          </svg>
+                        </button>
+                      )}
                       </div>
                     </div>
                     <div className="mt-1 text-xs text-zinc-500 truncate" title={a.email}>
@@ -843,7 +901,12 @@ export default function SettingsModal({
             </div>
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-zinc-400 mb-1">Nickname</div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs text-zinc-400">Nickname</div>
+                  {savedFlash === detailEmail && (
+                    <span className="text-[10px] text-emerald-400">✓ saved</span>
+                  )}
+                </div>
                 <input
                   defaultValue={displayNames[detailEmail] ?? ""}
                   placeholder="nickname"
@@ -967,7 +1030,12 @@ export default function SettingsModal({
             </div>
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-zinc-400 mb-1">Nickname</div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs text-zinc-400">Nickname</div>
+                  {savedFlash === subDetail && (
+                    <span className="text-[10px] text-emerald-400">✓ saved</span>
+                  )}
+                </div>
                 <input
                   defaultValue={displayNames[subDetail] ?? ""}
                   placeholder="nickname"
