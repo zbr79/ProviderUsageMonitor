@@ -27,6 +27,7 @@ export default function SettingsModal({
   const [claudeAccount, setClaudeAccount] = useState<string | null>(null);
   const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
   const [showProviderNames, setShowProviderNames] = useState(false);
+  const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">("auto");
   const [subDetail, setSubDetail] = useState<"cursor" | "grok" | "codex" | "claude" | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [disabledAccounts, setDisabledAccounts] = useState<string[]>([]);
@@ -55,6 +56,7 @@ export default function SettingsModal({
     setCodexEnabled(s.settings?.codexEnabled !== false);
     setClaudeEnabled(s.settings?.claudeEnabled !== false);
     setShowProviderNames(s.settings?.showProviderNames === true);
+    setThemeMode(s.settings?.themeMode ?? "auto");
     setDisplayNames(s.settings?.displayNames ?? {});
     setDisabledAccounts(s.settings?.disabledAccounts ?? []);
     fetch("/api/cursor", { cache: "no-store" })
@@ -178,6 +180,25 @@ export default function SettingsModal({
     } catch {
       toastError("Save failed");
       setDisabledAccounts(disabledAccounts);
+    }
+  };
+
+  const setTheme = async (mode: "auto" | "light" | "dark") => {
+    setThemeMode(mode);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ themeMode: mode }),
+      });
+      if (res.ok) {
+        toastSuccess(`Theme: ${mode}`);
+        onChanged();
+      } else {
+        toastError("Save failed");
+      }
+    } catch {
+      toastError("Save failed");
     }
   };
 
@@ -403,6 +424,30 @@ export default function SettingsModal({
               }`}
             />
           </button>
+        </div>
+
+        <div className="flex items-center justify-between px-5 pb-3 mb-3 border-b border-zinc-800">
+          <div>
+            <div className="text-sm font-medium text-zinc-200">Widget theme</div>
+            <div className="text-xs text-zinc-500">
+              Auto follows screen brightness (uses CPU); Light/Dark are static
+            </div>
+          </div>
+          <div className="flex rounded-lg overflow-hidden border border-zinc-700 shrink-0">
+            {(["auto", "light", "dark"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setTheme(m)}
+                className={`px-2.5 py-1 text-xs capitalize transition-colors ${
+                  themeMode === m
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">

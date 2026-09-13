@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
     typeof body?.showProviderNames === 'boolean'
       ? body.showProviderNames
       : current.showProviderNames
+  const themeMode =
+    body?.themeMode === 'light' || body?.themeMode === 'dark' || body?.themeMode === 'auto'
+      ? body.themeMode
+      : current.themeMode
   const displayNames =
     body?.displayNames && typeof body.displayNames === 'object'
       ? body.displayNames
@@ -36,6 +40,7 @@ export async function POST(req: NextRequest) {
     codexEnabled,
     claudeEnabled,
     showProviderNames,
+    themeMode,
     displayNames,
     disabledAccounts,
   })
