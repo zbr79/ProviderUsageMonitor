@@ -332,10 +332,10 @@ export default function SettingsModal({
   };
 
   const tabClass = (t: Tab) =>
-    `flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg ${
+    `flex items-center gap-1.5 px-0.5 pb-2 pt-1 -mb-px text-sm border-b-2 transition-colors ${
       tab === t
-        ? "bg-zinc-100 text-zinc-900"
-        : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+        ? "border-emerald-400 text-zinc-100"
+        : "border-transparent text-zinc-500 hover:text-zinc-300"
     }`;
 
   const anyAccountEnabled =
@@ -417,7 +417,7 @@ export default function SettingsModal({
           </button>
         </div>
 
-        <div className="flex gap-1 px-5 mb-3">
+        <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">
           <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
             {statusDot(anyAccountEnabled)}
             <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
