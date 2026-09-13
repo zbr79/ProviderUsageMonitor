@@ -210,6 +210,7 @@ export default function Widget() {
   const [claude, setClaude] = useState<ClaudeUsage | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [showProviderNames, setShowProviderNames] = useState(false);
+  const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">("auto");
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
 
@@ -236,8 +237,12 @@ export default function Widget() {
       try {
         const res = await fetch("/api/settings", { cache: "no-store" });
         const s = await res.json();
-        setDisplayNames(s.settings?.displayNames ?? {});
+        const names = s.settings?.displayNames ?? {};
+        setDisplayNames((prev) =>
+          JSON.stringify(prev) === JSON.stringify(names) ? prev : names,
+        );
         setShowProviderNames(s.settings?.showProviderNames === true);
+        setThemeMode(s.settings?.themeMode ?? "auto");
         setCursorEnabled(s.settings?.cursorEnabled !== false);
         setGrokEnabled(s.settings?.grokEnabled !== false);
         setCodexEnabled(s.settings?.codexEnabled !== false);
@@ -272,7 +277,12 @@ export default function Widget() {
     window.addEventListener("mouseup", up);
   };
 
-  const light = bgBright !== null && bgBright < 0.5;
+  const light =
+    themeMode === "light"
+      ? true
+      : themeMode === "dark"
+        ? false
+        : bgBright !== null && bgBright < 0.5;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -310,6 +320,7 @@ export default function Widget() {
       setGrokEnabled(sjson.settings?.grokEnabled !== false);
       setDisplayNames(sjson.settings?.displayNames ?? {});
       setShowProviderNames(sjson.settings?.showProviderNames === true);
+      setThemeMode(sjson.settings?.themeMode ?? "auto");
       setCursorError(!!cjson.error);
       if (!cjson.error) setCursor(cjson.usage);
       if (sjson.settings?.cursorEnabled === false) {

@@ -191,30 +191,47 @@ ipcMain.on("widget-resize", (_e, width, height) => {
 });
 
 function startBgSampler() {
-  setInterval(async () => {
-    if (!win || win.isDestroyed()) return;
-    try {
-      const display = screen.getPrimaryDisplay();
-      const sources = await desktopCapturer.getSources({
-        types: ["screen"],
-        thumbnailSize: { width: 240, height: 135 },
-      });
-      const src = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
-      if (!src) return;
-      const size = src.thumbnail.getSize();
-      const buffer = src.thumbnail.toBitmap();
-      let sum = 0;
-      let count = 0;
-      for (let i = 0; i + 3 < buffer.length; i += 12) {
-        sum += buffer[i] + buffer[i + 1] + buffer[i + 2];
-        count += 3;
+  const SETTINGS_FILE = path.join(APP_ROOT, "data", "settings.json");
+  async function loop() {
+    while (true) {
+      let mode = "auto";
+      try {
+        const s = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8"));
+        if (s?.themeMode === "light" || s?.themeMode === "dark") mode = s.themeMode;
+      } catch {
+        // no settings file yet → auto
       }
-      const avg = count ? sum / count / 255 : 0.5;
-      win.webContents.send("widget-bg", avg);
-    } catch {
-      // ignore sampling errors
+      if (mode === "auto") {
+        try {
+          if (win && !win.isDestroyed()) {
+            const display = screen.getPrimaryDisplay();
+            const sources = await desktopCapturer.getSources({
+              types: ["screen"],
+              thumbnailSize: { width: 160, height: 90 },
+            });
+            const src = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
+            if (src) {
+              const buffer = src.thumbnail.toBitmap();
+              let sum = 0;
+              let count = 0;
+              for (let i = 0; i + 3 < buffer.length; i += 12) {
+                sum += buffer[i] + buffer[i + 1] + buffer[i + 2];
+                count += 3;
+              }
+              const avg = count ? sum / count / 255 : 0.5;
+              win.webContents.send("widget-bg", avg);
+            }
+          }
+        } catch {
+          // ignore sampling errors
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      } else {
+        await new Promise((r) => setTimeout(r, 5000));
+      }
     }
-  }, 1000);
+  }
+  loop();
 }
 
 app.whenReady().then(async () => {
