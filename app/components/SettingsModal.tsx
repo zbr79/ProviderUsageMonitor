@@ -338,18 +338,6 @@ export default function SettingsModal({
         : "border-transparent text-zinc-500 hover:text-zinc-300"
     }`;
 
-  const anyAccountEnabled =
-    accounts != null &&
-    accounts.some((a) => !disabledAccounts.includes(a.email.toLowerCase()));
-
-  const statusDot = (on: boolean) => (
-    <span
-      className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-        on ? "bg-emerald-500" : "bg-zinc-600"
-      }`}
-    />
-  );
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -419,27 +407,22 @@ export default function SettingsModal({
 
         <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">
           <button className={tabClass("opencode")} onClick={() => setTab("opencode")}>
-            {statusDot(anyAccountEnabled)}
             <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             OpenCode
           </button>
           <button className={tabClass("cursor")} onClick={() => setTab("cursor")}>
-            {statusDot(cursorEnabled)}
             <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Cursor
           </button>
           <button className={tabClass("grok")} onClick={() => setTab("grok")}>
-            {statusDot(grokEnabled)}
             <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Grok Bot
           </button>
           <button className={tabClass("codex")} onClick={() => setTab("codex")}>
-            {statusDot(codexEnabled)}
             <img src="/openai.png" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Codex
           </button>
           <button className={tabClass("claude")} onClick={() => setTab("claude")}>
-            {statusDot(claudeEnabled)}
             <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />
             Claude
           </button>
