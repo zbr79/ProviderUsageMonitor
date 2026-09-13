@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
 
 interface AccountRow {
@@ -29,6 +29,25 @@ export default function SettingsModal({
   const [showProviderNames, setShowProviderNames] = useState(false);
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">("auto");
   const [mainTab, setMainTab] = useState<"system" | "accounts">("accounts");
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const dragState = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
+
+  const onHeaderMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, input, select")) return;
+    dragState.current = { sx: e.clientX, sy: e.clientY, ox: dragPos.x, oy: dragPos.y };
+    const move = (ev: MouseEvent) => {
+      const d = dragState.current;
+      if (!d) return;
+      setDragPos({ x: d.ox + ev.clientX - d.sx, y: d.oy + ev.clientY - d.sy });
+    };
+    const up = () => {
+      dragState.current = null;
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
   const [subDetail, setSubDetail] = useState<"cursor" | "grok" | "codex" | "claude" | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [disabledAccounts, setDisabledAccounts] = useState<string[]>([]);
@@ -388,9 +407,13 @@ export default function SettingsModal({
     >
       <div
         className="bg-zinc-900 rounded-xl shadow-2xl w-[576px] h-[608px] flex flex-col border border-zinc-700 overflow-hidden"
+        style={{ transform: `translate(${dragPos.x}px, ${dragPos.y}px)` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-2">
+        <div
+          className="flex items-center justify-between px-5 pt-5 pb-2 cursor-move select-none"
+          onMouseDown={onHeaderMouseDown}
+        >
           <h2 className="text-lg font-bold text-zinc-100">Settings</h2>
           <button
             onClick={onClose}
