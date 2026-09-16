@@ -630,7 +630,9 @@ export default function SettingsModal({
                 accounts.map((a) => (
                   <div
                     key={a.email}
-                    className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
+                    className={`bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 ${
+                      disabledAccounts.includes(a.email.toLowerCase()) ? "opacity-45" : ""
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <button
