@@ -646,7 +646,7 @@ export default function SettingsModal({
                         onClick={() => openDetail(a.email)}
                         className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
                       >
-                        OpenCode Go
+                        {a.email}
                       </button>
                       <div className="flex items-center gap-0.5 shrink-0">
                       <button
@@ -710,8 +710,7 @@ export default function SettingsModal({
                       )}
                       </div>
                     </div>
-                    <div className="mt-1 text-xs text-zinc-500 truncate">{a.email}</div>
-                    <div className="mt-0.5 text-xs text-zinc-400 truncate">
+                    <div className="mt-1 text-xs text-zinc-500 truncate">
                       {displayNames[a.email] ?? "no nickname"}
                     </div>
                   </div>
@@ -723,12 +722,9 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-<button
-                  onClick={() => setSubDetail("cursor")}
-                  className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
-                >
-                  Cursor
-                </button>
+<span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {cursorAccount ?? "account unavailable"}
+                </span>
                 <button
                   onClick={() => setSubDetail("cursor")}
                   title="Cursor details"
@@ -749,31 +745,25 @@ export default function SettingsModal({
                     </svg>
                   </button>
               </div>
-<div className="mt-1 text-xs text-zinc-500 truncate">
-                  {cursorAccount ?? "account unavailable"}
-                </div>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <span className="flex-1 min-w-0 text-xs text-zinc-400 truncate">
-                    {displayNames["cursor"] ?? "no nickname"}
+<div className="mt-1 flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["cursor"] ?? "no nickname"}
+                </span>
+                {cursorPlan && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
+                    {cursorPlan}
                   </span>
-                  {cursorPlan && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
-                      {cursorPlan}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
           </div>
         ) : tab === "grok" ? (
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-  <button
-                    onClick={() => setSubDetail("grok")}
-                    className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
-                  >
-                    Grok Bot
-                  </button>
+  <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {cursorAccount ?? "account unavailable"}
+                </span>
                   <button
                     onClick={() => setSubDetail("grok")}
                     title="Grok Bot details"
@@ -794,31 +784,25 @@ export default function SettingsModal({
                     </svg>
                   </button>
               </div>
-<div className="mt-1 text-xs text-zinc-500 truncate">
-                  {cursorAccount ?? "account unavailable"}
-                </div>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <span className="flex-1 min-w-0 text-xs text-zinc-400 truncate">
-                    {displayNames["grok"] ?? "no nickname"}
+<div className="mt-1 flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["grok"] ?? "no nickname"}
+                </span>
+                {cursorPlan && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
+                    {cursorPlan}
                   </span>
-                  {cursorPlan && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
-                      {cursorPlan}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
             </div>
+          </div>
         ) : tab === "codex" ? (
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-  <button
-                    onClick={() => setSubDetail("codex")}
-                    className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
-                  >
-                    Codex
-                  </button>
+  <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {codexAccount ?? "account unavailable"}
+                </span>
                   <button
                     onClick={() => setSubDetail("codex")}
                     title="Codex details"
@@ -839,14 +823,11 @@ export default function SettingsModal({
                     </svg>
                   </button>
               </div>
-              <div className="mt-1 text-xs text-zinc-500 truncate">
-                  {codexAccount ?? "account unavailable"}
-                </div>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <span className="flex-1 min-w-0 text-xs text-zinc-400 truncate">
-                    {displayNames["codex"] ?? "no nickname"}
-                  </span>
-                  {codexPlan && (
+              <div className="mt-1 flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["codex"] ?? "no nickname"}
+                </span>
+                {codexPlan && (
                   <span
                     className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${
                       codexPlan.toLowerCase() === "free"
@@ -864,12 +845,9 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-  <button
-                    onClick={() => setSubDetail("claude")}
-                    className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
-                  >
-                    Claude
-                  </button>
+  <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {claudeAccount ?? "account unavailable"}
+                </span>
                   <button
                     onClick={() => setSubDetail("claude")}
                     title="Claude details"
@@ -890,14 +868,11 @@ export default function SettingsModal({
                     </svg>
                   </button>
               </div>
-              <div className="mt-1 text-xs text-zinc-500 truncate">
-                  {claudeAccount ?? "account unavailable"}
-                </div>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <span className="flex-1 min-w-0 text-xs text-zinc-400 truncate">
-                    {displayNames["claude"] ?? "no nickname"}
-                  </span>
-                  {claudeStatus && (
+              <div className="mt-1 flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["claude"] ?? "no nickname"}
+                </span>
+                {claudeStatus && (
                   <span
                     className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${
                       claudeStatus === "not subscribed"
@@ -931,9 +906,10 @@ export default function SettingsModal({
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 min-w-0">
-                <h3 className="text-base font-bold text-zinc-100 truncate">
-                  {detailEmail}
-                </h3>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-zinc-100">OpenCode Go</h3>
+                  <div className="text-xs text-zinc-500 truncate">{detailEmail}</div>
+                </div>
                 <button
                   onClick={() =>
                     toggleAccount(
@@ -1088,15 +1064,24 @@ export default function SettingsModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-zinc-100">
-                {subDetail === "cursor"
-                  ? "Cursor"
-                  : subDetail === "grok"
-                    ? "Grok Bot"
-                    : subDetail === "codex"
-                      ? "Codex"
-                      : "Claude"}
-              </h3>
+              <div className="min-w-0">
+                <h3 className="text-base font-bold text-zinc-100">
+                  {subDetail === "cursor"
+                    ? "Cursor"
+                    : subDetail === "grok"
+                      ? "Grok Bot"
+                      : subDetail === "codex"
+                        ? "Codex"
+                        : "Claude"}
+                </h3>
+                <div className="text-xs text-zinc-500 truncate">
+                  {(subDetail === "codex"
+                    ? codexAccount
+                    : subDetail === "claude"
+                      ? claudeAccount
+                      : cursorAccount) ?? "account unavailable"}
+                </div>
+              </div>
               <button
                 onClick={() => setSubDetail(null)}
                 title="Close"
@@ -1174,12 +1159,6 @@ export default function SettingsModal({
                   onBlur={(e) => saveDisplayName(subDetail, e.target.value)}
                   className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
                 />
-              </div>
-              <div>
-                <div className="text-xs text-zinc-400 mb-1">Account</div>
-                <div className="text-sm text-zinc-200 truncate" title={(subDetail === "codex" ? codexAccount : subDetail === "claude" ? claudeAccount : cursorAccount) ?? ""}>
-                  {(subDetail === "codex" ? codexAccount : subDetail === "claude" ? claudeAccount : cursorAccount) ?? "unavailable"}
-                </div>
               </div>
               {subDetail === "claude" && claudeStatus && (
                 <div>
