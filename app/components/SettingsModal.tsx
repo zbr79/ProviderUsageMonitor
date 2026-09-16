@@ -29,6 +29,7 @@ export default function SettingsModal({
   const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
   const [showProviderNames, setShowProviderNames] = useState(false);
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark" | "white">("auto");
+  const [panelTheme, setPanelTheme] = useState<"light" | "dark">("dark");
   const [mainTab, setMainTab] = useState<"system" | "accounts">("accounts");
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragState = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
@@ -78,6 +79,7 @@ export default function SettingsModal({
     setClaudeEnabled(s.settings?.claudeEnabled !== false);
     setShowProviderNames(s.settings?.showProviderNames === true);
     setThemeMode(s.settings?.themeMode ?? "auto");
+    setPanelTheme(s.settings?.panelTheme === "light" ? "light" : "dark");
     setDisplayNames(s.settings?.displayNames ?? {});
     setDisabledAccounts(s.settings?.disabledAccounts ?? []);
     apiFetch("/api/cursor", { cache: "no-store" })
@@ -205,6 +207,25 @@ export default function SettingsModal({
     } catch {
       toastError("Save failed");
       setDisabledAccounts(disabledAccounts);
+    }
+  };
+
+  const setPanel = async (theme: "light" | "dark") => {
+    setPanelTheme(theme);
+    try {
+      const res = await apiFetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ panelTheme: theme }),
+      });
+      if (res.ok) {
+        toastSuccess(`Panel theme: ${theme}`);
+        onChanged();
+      } else {
+        toastError("Save failed");
+      }
+    } catch {
+      toastError("Save failed");
     }
   };
 
@@ -405,7 +426,9 @@ export default function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 bg-transparent flex items-center justify-center p-4 z-50"
+      className={`fixed inset-0 bg-transparent flex items-center justify-center p-4 z-50 ${
+        panelTheme === "light" ? "settings-light" : ""
+      }`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -458,6 +481,28 @@ export default function SettingsModal({
 
         {mainTab === "system" ? (
           <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5 space-y-2">
+            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
+              <div>
+                <div className="text-sm font-medium text-zinc-200">Panel theme</div>
+                <div className="text-xs text-zinc-500">Appearance of this settings panel</div>
+              </div>
+              <div className="flex rounded-lg overflow-hidden border border-zinc-700 shrink-0">
+                {(["light", "dark"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setPanel(t)}
+                    className={`px-2.5 py-1 text-xs capitalize transition-colors ${
+                      panelTheme === t
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
               <div>
                 <div className="text-sm font-medium text-zinc-200">Widget theme</div>

@@ -33,6 +33,10 @@ export async function POST(req: NextRequest) {
     body?.themeMode === 'auto'
       ? body.themeMode
       : current.themeMode
+  const panelTheme =
+    body?.panelTheme === 'light' || body?.panelTheme === 'dark'
+      ? body.panelTheme
+      : current.panelTheme
   const displayNames =
     body?.displayNames && typeof body.displayNames === 'object'
       ? body.displayNames
@@ -47,6 +51,7 @@ export async function POST(req: NextRequest) {
     claudeEnabled,
     showProviderNames,
     themeMode,
+    panelTheme,
     displayNames,
     disabledAccounts,
   })

@@ -2,6 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 
 export type ThemeMode = 'auto' | 'light' | 'dark' | 'white'
+export type PanelTheme = 'light' | 'dark'
 
 export interface Settings {
   cursorEnabled: boolean
@@ -10,6 +11,7 @@ export interface Settings {
   claudeEnabled: boolean
   showProviderNames: boolean
   themeMode: ThemeMode
+  panelTheme: PanelTheme
   displayNames: Record<string, string>
   disabledAccounts: string[]
 }
@@ -27,6 +29,7 @@ export async function getSettings(): Promise<Settings> {
       claudeEnabled: parsed?.claudeEnabled !== false,
       showProviderNames: parsed?.showProviderNames === true,
       themeMode: mode === 'light' || mode === 'dark' || mode === 'white' ? mode : 'auto',
+      panelTheme: parsed?.panelTheme === 'light' ? 'light' : 'dark',
       displayNames:
         parsed?.displayNames && typeof parsed.displayNames === 'object'
           ? parsed.displayNames
@@ -43,6 +46,7 @@ export async function getSettings(): Promise<Settings> {
       claudeEnabled: true,
       showProviderNames: false,
       themeMode: 'auto',
+      panelTheme: 'dark',
       displayNames: {},
       disabledAccounts: [],
     }
