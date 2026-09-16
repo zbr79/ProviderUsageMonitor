@@ -1,2 +1,4 @@
+Set fso = CreateObject("Scripting.FileSystemObject")
 Set ws = CreateObject("Wscript.Shell")
-ws.Run "cmd /c ""cd /d C:\Users\Zhibin Ren\Desktop\OpenCode\desktop && npm start""", 0, False
+dir = fso.GetParentFolderName(WScript.ScriptFullName)
+ws.Run "cmd /c cd /d """ & dir & """ && npm start", 0, False

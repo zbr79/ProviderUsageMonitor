@@ -43,6 +43,7 @@ next-env.d.ts
 # secrets
 /data/accounts.json
 /data/settings.json
+/data/.api-secret
 
 # desktop widget
 /desktop/node_modules/

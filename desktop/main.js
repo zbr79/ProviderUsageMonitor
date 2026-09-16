@@ -2,15 +2,20 @@ const { app, BrowserWindow, Menu, ipcMain, screen, desktopCapturer } = require("
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const APP_ROOT = path.resolve(__dirname, "..");
-const WIDGET_URL = "http://localhost:3100/widget";
+const WIDGET_URL = "http://127.0.0.1:3100/widget";
 const WIDTH = 238;
 const CONFIG_PATH = path.join(app.getPath("userData"), "widget-config.json");
+const SECRET_PATH = path.join(APP_ROOT, "data", ".api-secret");
 
 let win = null;
 let settingsWin = null;
 let dragOffset = null;
+let serverChild = null;
+let spawnedServer = false;
+let usageSecret = "";
 
 function loadPos() {
   try {
@@ -42,26 +47,63 @@ function savePos() {
   }
 }
 
+function ensureSecret() {
+  try {
+    fs.mkdirSync(path.dirname(SECRET_PATH), { recursive: true });
+    if (fs.existsSync(SECRET_PATH)) {
+      const existing = fs.readFileSync(SECRET_PATH, "utf8").trim();
+      if (existing) {
+        usageSecret = existing;
+        return;
+      }
+    }
+    usageSecret = crypto.randomBytes(32).toString("hex");
+    fs.writeFileSync(SECRET_PATH, usageSecret, { encoding: "utf8", mode: 0o600 });
+  } catch {
+    usageSecret = crypto.randomBytes(32).toString("hex");
+  }
+}
+
+async function serverIsUp() {
+  try {
+    const res = await fetch("http://127.0.0.1:3100/widget", {
+      signal: AbortSignal.timeout(2000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 function startServer() {
-  const child = spawn("cmd.exe", ["/c", "npm run start"], {
+  serverChild = spawn("cmd.exe", ["/c", "npm run start"], {
     cwd: APP_ROOT,
     stdio: "ignore",
     windowsHide: true,
   });
-  child.unref();
+  spawnedServer = true;
+}
+
+function stopServer() {
+  if (!spawnedServer || !serverChild) return;
+  const pid = serverChild.pid;
+  serverChild = null;
+  spawnedServer = false;
+  if (!pid) return;
+  try {
+    spawn("taskkill", ["/pid", String(pid), "/f", "/t"], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
+  } catch {
+    // ignore
+  }
 }
 
 async function waitForServer(timeoutMs = 60000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    try {
-      const res = await fetch("http://localhost:3100/widget", {
-        signal: AbortSignal.timeout(2000),
-      });
-      if (res.ok) return true;
-    } catch {
-      // not up yet
-    }
+    if (await serverIsUp()) return true;
     await new Promise((r) => setTimeout(r, 1000));
   }
   return false;
@@ -137,9 +179,10 @@ function openSettingsOverlay() {
     },
   });
   settingsWin.setAlwaysOnTop(true, "screen-saver");
-  settingsWin.loadURL("http://localhost:3100/settings");
+  settingsWin.loadURL("http://127.0.0.1:3100/settings");
   settingsWin.on("closed", () => {
     settingsWin = null;
+    if (win && !win.isDestroyed()) win.webContents.send("widget-settings-changed");
   });
 }
 
@@ -162,6 +205,9 @@ function showMenu() {
 
 ipcMain.on("settings-close", () => {
   if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+});
+ipcMain.on("get-usage-secret", (e) => {
+  e.returnValue = usageSecret;
 });
 
 ipcMain.on("widget-close", () => app.quit());
@@ -235,8 +281,12 @@ function startBgSampler() {
 }
 
 app.whenReady().then(async () => {
-  startServer();
+  ensureSecret();
+  if (!(await serverIsUp())) {
+    startServer();
+  }
   const ok = await waitForServer();
+  if (!usageSecret) ensureSecret();
   if (ok) {
     createWindow();
     startBgSampler();
@@ -246,4 +296,5 @@ app.whenReady().then(async () => {
   }
 });
 
+app.on("before-quit", () => stopServer());
 app.on("window-all-closed", () => app.quit());

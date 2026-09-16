@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface AccountRow {
   email: string;
@@ -67,8 +68,8 @@ export default function SettingsModal({
 
   const refresh = async () => {
     const [u, s] = await Promise.all([
-      fetch("/api/usage", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+      apiFetch("/api/accounts", { cache: "no-store" }).then((r) => r.json()),
+      apiFetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
     ]);
     setAccounts((u.accounts ?? []).map((a: AccountRow) => ({ email: a.email })));
     setCursorEnabled(s.settings?.cursorEnabled !== false);
@@ -79,21 +80,21 @@ export default function SettingsModal({
     setThemeMode(s.settings?.themeMode ?? "auto");
     setDisplayNames(s.settings?.displayNames ?? {});
     setDisabledAccounts(s.settings?.disabledAccounts ?? []);
-    fetch("/api/cursor", { cache: "no-store" })
+    apiFetch("/api/cursor", { cache: "no-store" })
       .then((r) => r.json())
       .then((c) => {
         setCursorAccount(c.usage?.accountName ?? null);
         setCursorPlan(c.usage?.planName ?? null);
       })
       .catch(() => {});
-    fetch("/api/codex", { cache: "no-store" })
+    apiFetch("/api/codex", { cache: "no-store" })
       .then((r) => r.json())
       .then((c) => {
         setCodexAccount(c.usage?.email ?? null);
         setCodexPlan(c.usage?.planType ?? null);
       })
       .catch(() => {});
-    fetch("/api/claude", { cache: "no-store" })
+    apiFetch("/api/claude", { cache: "no-store" })
       .then((r) => r.json())
       .then((c) => {
         setClaudeAccount(c.usage?.email ?? null);
@@ -119,9 +120,13 @@ export default function SettingsModal({
     setDetailKey(null);
     setEditKey(false);
     try {
-      const res = await fetch(`/api/key?email=${encodeURIComponent(email)}`);
+      const res = await apiFetch(`/api/key?email=${encodeURIComponent(email)}`);
+      if (!res.ok) {
+        setDetailKey(null);
+        return;
+      }
       const json = await res.json();
-      setDetailKey(json.key ?? null);
+      setDetailKey(typeof json.key === "string" ? json.key : null);
     } catch {
       setDetailKey(null);
     }
@@ -133,7 +138,7 @@ export default function SettingsModal({
     if (!detailEmail) return;
     setKeyBusy(true);
     try {
-      const res = await fetch("/api/accounts", {
+      const res = await apiFetch("/api/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: detailEmail, key: newKeyValue }),
@@ -160,7 +165,7 @@ export default function SettingsModal({
     if (!name.trim()) delete next[key];
     setDisplayNames(next);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cursorEnabled, displayNames: next }),
@@ -185,7 +190,7 @@ export default function SettingsModal({
       : [...disabledAccounts.filter((e) => e !== lower), lower];
     setDisabledAccounts(next);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cursorEnabled, displayNames, disabledAccounts: next }),
@@ -206,7 +211,7 @@ export default function SettingsModal({
   const setTheme = async (mode: "auto" | "light" | "dark") => {
     setThemeMode(mode);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ themeMode: mode }),
@@ -225,7 +230,7 @@ export default function SettingsModal({
   const toggleProviderNames = async (enabled: boolean) => {
     setShowProviderNames(enabled);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ showProviderNames: enabled }),
@@ -246,7 +251,7 @@ export default function SettingsModal({
   const toggleClaude = async (enabled: boolean) => {
     setClaudeEnabled(enabled);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ claudeEnabled: enabled }),
@@ -267,7 +272,7 @@ export default function SettingsModal({
   const toggleCodex = async (enabled: boolean) => {
     setCodexEnabled(enabled);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ codexEnabled: enabled }),
@@ -288,7 +293,7 @@ export default function SettingsModal({
   const toggleGrok = async (enabled: boolean) => {
     setGrokEnabled(enabled);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ grokEnabled: enabled }),
@@ -310,7 +315,7 @@ export default function SettingsModal({
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await fetch("/api/accounts", {
+      const res = await apiFetch("/api/accounts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: newEmail, key: newKey }),
@@ -334,7 +339,7 @@ export default function SettingsModal({
 
   const removeAccount = async (email: string) => {
     try {
-      const res = await fetch("/api/accounts", {
+      const res = await apiFetch("/api/accounts", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -354,7 +359,7 @@ export default function SettingsModal({
   const toggleCursor = async (enabled: boolean) => {
     setCursorEnabled(enabled);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await apiFetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cursorEnabled: enabled }),

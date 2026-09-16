@@ -25,7 +25,7 @@ Next.js app (server)                 Electron widget (desktop/)
 ```
 
 - The widget and settings modal read from the same local API routes.
-- The server runs on port **3100** — deliberately not 3000 so it can coexist with other local dev servers.
+- The server binds to **127.0.0.1:3100** — deliberately not 3000 so it can coexist with other local dev servers.
 - Every provider integration lives in `lib/`: `opencode.ts`, `cursor.ts`, `codex.ts`, `claude.ts`, `settings.ts`.
 
 ## Requirements
@@ -45,12 +45,12 @@ cd desktop && npm install && cd ..
 
 # 3. Build and run
 npm run build
-npm run start        # serves the app on http://localhost:3100
+npm run start        # serves the app on http://127.0.0.1:3100
 ```
 
 ### Desktop shortcut
 
-`desktop/widget-launcher.vbs` starts the server hidden and launches the floating widget. Create a shortcut to it (via `wscript.exe`) for one-click launch.
+`desktop/widget-launcher.vbs` starts the floating widget from the `desktop/` folder (hidden). Create a shortcut to it (via `wscript.exe`) for one-click launch.
 
 ## Accounts & Secrets
 
@@ -58,6 +58,7 @@ Provider credentials **never live in this repo**:
 
 - `data/accounts.json` — OpenCode API accounts (`email` + `sk-...` key). **Gitignored.**
 - `data/settings.json` — toggles, display names, disabled accounts. **Gitignored.**
+- `data/.api-secret` — local token for key/account writes. **Gitignored.** Electron injects it automatically.
 - `data/accounts.example.json` — committed template showing the format
 
 Cursor / Codex / Claude read their tokens directly from each app's local credential store at request time; nothing is copied into this project.
@@ -66,7 +67,7 @@ Cursor / Codex / Claude read their tokens directly from each app's local credent
 
 ### Widget
 - Compact panel showing the active account + all providers; click expand for the full list
-- **Adaptive theme** — samples screen brightness every second and fades between dark/light card styles
+- **Adaptive theme** — samples screen brightness every 3 seconds and fades between dark/light card styles
 - **Change detection** — when an account's usage percent moves, a green ▲ appears for 20s and the most recently used account floats to the top
 - **Reset countdowns** — each bar shows time until its window resets (`5d 7h 45m`); monthly resets always visible
 - **Status badges** — `Go` (OpenCode), plan names for Cursor/Codex, `Free` for Claude
@@ -87,9 +88,9 @@ Cursor / Codex / Claude read their tokens directly from each app's local credent
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Development server on port 3100 |
+| `npm run dev` | Development server on http://127.0.0.1:3100 |
 | `npm run build` | Production build |
-| `npm run start` | Serve the production build on port 3100 |
+| `npm run start` | Serve the production build on http://127.0.0.1:3100 |
 
 ## Project layout
 
