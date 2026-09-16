@@ -72,7 +72,14 @@ export default function SettingsModal({
       apiFetch("/api/accounts", { cache: "no-store" }).then((r) => r.json()),
       apiFetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
     ]);
-    setAccounts((u.accounts ?? []).map((a: AccountRow) => ({ email: a.email })));
+    const disabled = s.settings?.disabledAccounts ?? [];
+    const list = (u.accounts ?? []).map((a: AccountRow) => ({ email: a.email }));
+    list.sort(
+      (a: AccountRow, b: AccountRow) =>
+        (disabled.includes(a.email.toLowerCase()) ? 1 : 0) -
+        (disabled.includes(b.email.toLowerCase()) ? 1 : 0),
+    );
+    setAccounts(list);
     setCursorEnabled(s.settings?.cursorEnabled !== false);
     setGrokEnabled(s.settings?.grokEnabled !== false);
     setCodexEnabled(s.settings?.codexEnabled !== false);
@@ -81,7 +88,7 @@ export default function SettingsModal({
     setThemeMode(s.settings?.themeMode ?? "auto");
     setPanelTheme(s.settings?.panelTheme === "light" ? "light" : "dark");
     setDisplayNames(s.settings?.displayNames ?? {});
-    setDisabledAccounts(s.settings?.disabledAccounts ?? []);
+    setDisabledAccounts(disabled);
     apiFetch("/api/cursor", { cache: "no-store" })
       .then((r) => r.json())
       .then((c) => {
