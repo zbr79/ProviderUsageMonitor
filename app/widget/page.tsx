@@ -462,7 +462,11 @@ export default function Widget() {
             Go
           </span>
         </div>
-        {row.error ? (
+        {disabled ? (
+          <div className={`text-[10px] ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+            monitoring off
+          </div>
+        ) : row.error ? (
           <div className="text-[10px] text-red-400">unavailable</div>
         ) : row.usage ? (
           <div className="flex gap-2">
@@ -768,12 +772,22 @@ export default function Widget() {
             {badge}
           </span>
         </div>
-        <div className={`text-[10px] ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+        <div className={`text-[10px] mb-1.5 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
           {!claude
             ? "unavailable"
             : !claude.signedIn
               ? "not signed in"
               : claude.email ?? "signed in"}
+        </div>
+        <div className="flex gap-2">
+          <MiniBar
+            label="Usage"
+            w={{ status: "ok", percent: 0, resetsAt: "" }}
+            dimmed={!claude?.subscribed}
+            increased={false}
+            light={light}
+            reset={null}
+          />
         </div>
       </div>
     );
