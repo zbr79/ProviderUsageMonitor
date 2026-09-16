@@ -722,8 +722,8 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-<span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
-                  Cursor
+<span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {cursorAccount ?? "account unavailable"}
                 </span>
                 <button
                   onClick={() => setSubDetail("cursor")}
@@ -745,12 +745,9 @@ export default function SettingsModal({
                     </svg>
                   </button>
               </div>
-              <div className="mt-1 flex items-center gap-2">
-                <span
-                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
-                  title={cursorAccount ?? ""}
-                >
-                  {cursorAccount ?? "account unavailable"}
+<div className="mt-1 flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["cursor"] ?? "no nickname"}
                 </span>
                 {cursorPlan && (
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
@@ -764,8 +761,8 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-  <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
-                  Grok Bot
+  <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {cursorAccount ?? "account unavailable"}
                 </span>
                   <button
                     onClick={() => setSubDetail("grok")}
@@ -788,11 +785,8 @@ export default function SettingsModal({
                   </button>
               </div>
 <div className="mt-1 flex items-center gap-2">
-                <span
-                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
-                  title={cursorAccount ?? ""}
-                >
-                  {cursorAccount ?? "account unavailable"}
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["grok"] ?? "no nickname"}
                 </span>
                 {cursorPlan && (
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30 shrink-0">
@@ -806,8 +800,8 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-  <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
-                  Codex
+  <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {codexAccount ?? "account unavailable"}
                 </span>
                   <button
                     onClick={() => setSubDetail("codex")}
@@ -830,11 +824,8 @@ export default function SettingsModal({
                   </button>
               </div>
               <div className="mt-1 flex items-center gap-2">
-                <span
-                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
-                  title={codexAccount ?? ""}
-                >
-                  {codexAccount ?? "account unavailable"}
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["codex"] ?? "no nickname"}
                 </span>
                 {codexPlan && (
                   <span
@@ -854,8 +845,8 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-  <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
-                  Claude
+  <span className="flex-1 min-w-0 text-sm text-zinc-200 truncate">
+                  {claudeAccount ?? "account unavailable"}
                 </span>
                   <button
                     onClick={() => setSubDetail("claude")}
@@ -878,11 +869,8 @@ export default function SettingsModal({
                   </button>
               </div>
               <div className="mt-1 flex items-center gap-2">
-                <span
-                  className="flex-1 min-w-0 text-xs text-zinc-500 truncate"
-                  title={claudeAccount ?? ""}
-                >
-                  {claudeAccount ?? "account unavailable"}
+                <span className="flex-1 min-w-0 text-xs text-zinc-500 truncate">
+                  {displayNames["claude"] ?? "no nickname"}
                 </span>
                 {claudeStatus && (
                   <span
