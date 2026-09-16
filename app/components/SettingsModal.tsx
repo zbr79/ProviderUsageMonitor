@@ -872,51 +872,6 @@ export default function SettingsModal({
                   {detailEmail}
                 </h3>
                 <button
-                  onClick={() => {
-                    setNewKeyValue("");
-                    setEditKey(true);
-                  }}
-                  title="Update API key"
-                  className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 shrink-0"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-3.5 w-3.5"
-                  >
-                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                  </svg>
-                </button>
-              </div>
-              <button
-                onClick={() => setDetailEmail(null)}
-                title="Close"
-                className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-zinc-400">Monitoring</div>
-                <button
                   onClick={() =>
                     toggleAccount(
                       detailEmail,
@@ -950,6 +905,27 @@ export default function SettingsModal({
                   )}
                 </button>
               </div>
+              <button
+                onClick={() => setDetailEmail(null)}
+                title="Close"
+                className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-xs text-zinc-400">Nickname</div>
