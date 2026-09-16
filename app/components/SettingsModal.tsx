@@ -968,20 +968,18 @@ export default function SettingsModal({
               </button>
             </div>
             <div className="space-y-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs text-zinc-400">Nickname</div>
+<div className="flex items-center gap-2">
+                  <div className="text-xs text-zinc-400 shrink-0">Nickname</div>
+                  <input
+                    defaultValue={displayNames[detailEmail] ?? ""}
+                    placeholder="nickname"
+                    onBlur={(e) => saveDisplayName(detailEmail, e.target.value)}
+                    className="flex-1 min-w-0 rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                  />
                   {savedFlash === detailEmail && (
-                    <span className="text-[10px] text-emerald-400">✓ saved</span>
+                    <span className="text-[10px] text-emerald-400 shrink-0">✓ saved</span>
                   )}
                 </div>
-                <input
-                  defaultValue={displayNames[detailEmail] ?? ""}
-                  placeholder="nickname"
-                  onBlur={(e) => saveDisplayName(detailEmail, e.target.value)}
-                  className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
-                />
-              </div>
               <div>
                 <div className="text-xs text-zinc-400 mb-1">API key</div>
                 <div className="flex items-center gap-1.5">
@@ -1178,20 +1176,18 @@ export default function SettingsModal({
               </button>
             </div>
             <div className="space-y-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs text-zinc-400">Nickname</div>
+<div className="flex items-center gap-2">
+                  <div className="text-xs text-zinc-400 shrink-0">Nickname</div>
+                  <input
+                    defaultValue={displayNames[subDetail] ?? ""}
+                    placeholder="nickname"
+                    onBlur={(e) => saveDisplayName(subDetail, e.target.value)}
+                    className="flex-1 min-w-0 rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                  />
                   {savedFlash === subDetail && (
-                    <span className="text-[10px] text-emerald-400">✓ saved</span>
+                    <span className="text-[10px] text-emerald-400 shrink-0">✓ saved</span>
                   )}
                 </div>
-                <input
-                  defaultValue={displayNames[subDetail] ?? ""}
-                  placeholder="nickname"
-                  onBlur={(e) => saveDisplayName(subDetail, e.target.value)}
-                  className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
-                />
-              </div>
             </div>
           </div>
         </div>
