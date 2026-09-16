@@ -907,7 +907,12 @@ export default function SettingsModal({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="min-w-0">
-                  <h3 className="text-base font-bold text-zinc-100">OpenCode Go</h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-base font-bold text-zinc-100">OpenCode</h3>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
+                      Go
+                    </span>
+                  </div>
                   <div className="text-xs text-zinc-500 truncate">{detailEmail}</div>
                 </div>
                 <button
@@ -1065,15 +1070,46 @@ export default function SettingsModal({
           >
             <div className="flex items-center justify-between mb-4">
               <div className="min-w-0">
-                <h3 className="text-base font-bold text-zinc-100">
-                  {subDetail === "cursor"
-                    ? "Cursor"
-                    : subDetail === "grok"
-                      ? "Grok Bot"
-                      : subDetail === "codex"
-                        ? "Codex"
-                        : "Claude"}
-                </h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-bold text-zinc-100">
+                    {subDetail === "cursor"
+                      ? "Cursor"
+                      : subDetail === "grok"
+                        ? "Grok Bot"
+                        : subDetail === "codex"
+                          ? "Codex"
+                          : "Claude"}
+                  </h3>
+                  {(subDetail === "cursor" || subDetail === "grok") && cursorPlan && (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
+                      {cursorPlan}
+                    </span>
+                  )}
+                  {subDetail === "codex" && codexPlan && (
+                    <span
+                      className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                        codexPlan.toLowerCase() === "free"
+                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
+                          : "bg-blue-500/15 text-blue-300 border-blue-400/30"
+                      }`}
+                    >
+                      {codexPlan.charAt(0).toUpperCase() + codexPlan.slice(1)}
+                    </span>
+                  )}
+                  {subDetail === "claude" && claudeStatus && (
+                    <span
+                      className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                        claudeStatus === "not subscribed"
+                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
+                          : claudeStatus === "unavailable" || claudeStatus === "not signed in"
+                            ? "bg-zinc-500/15 text-zinc-400 border-zinc-500/30"
+                            : "bg-blue-500/15 text-blue-300 border-blue-400/30"
+                      }`}
+                    >
+                      {claudeStatus === "not subscribed" ? "Free" : claudeStatus}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-zinc-500 truncate">
                   {(subDetail === "codex"
                     ? codexAccount
@@ -1160,28 +1196,6 @@ export default function SettingsModal({
                   className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
                 />
               </div>
-              {subDetail === "claude" && claudeStatus && (
-                <div>
-                  <div className="text-xs text-zinc-400 mb-1">Subscription</div>
-                  <div className="text-sm text-zinc-200">{claudeStatus}</div>
-                </div>
-              )}
-              {subDetail === "cursor" && cursorPlan && (
-                <div>
-                  <div className="text-xs text-zinc-400 mb-1">Plan</div>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
-                    {cursorPlan}
-                  </span>
-                </div>
-              )}
-              {subDetail === "codex" && codexPlan && (
-                <div>
-                  <div className="text-xs text-zinc-400 mb-1">Plan</div>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
-                    {codexPlan}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
