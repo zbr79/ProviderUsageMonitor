@@ -610,14 +610,14 @@ export default function SettingsModal({
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="email or label"
                   required
-                  className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500"
+                  className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
                 />
                 <input
                   value={newKey}
                   onChange={(e) => setNewKey(e.target.value)}
                   placeholder="sk-..."
                   required
-                  className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-2 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
+                  className="rounded-lg bg-zinc-800 border border-zinc-600 px-3 py-1 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
                 />
                 <button
                   type="submit"
@@ -974,7 +974,7 @@ export default function SettingsModal({
                     defaultValue={displayNames[detailEmail] ?? ""}
                     placeholder="nickname"
                     onBlur={(e) => saveDisplayName(detailEmail, e.target.value)}
-                    className="flex-1 min-w-0 rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                    className="flex-1 min-w-0 rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
                   />
                   {savedFlash === detailEmail && (
                     <span className="text-[10px] text-emerald-400 shrink-0">✓ saved</span>
@@ -983,7 +983,7 @@ export default function SettingsModal({
               <div>
                 <div className="text-xs text-zinc-400 mb-1">API key</div>
                 <div className="flex items-center gap-1.5">
-                  <div className="flex-1 min-w-0 text-xs font-mono text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 break-all">
+                  <div className="flex-1 min-w-0 text-xs font-mono text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 break-all">
                     {detailKey ? maskKey(detailKey) : "…"}
                   </div>
                   <button
@@ -1032,7 +1032,7 @@ export default function SettingsModal({
                 value={newKeyValue}
                 onChange={(e) => setNewKeyValue(e.target.value)}
                 placeholder="new sk-... key"
-                className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
+                className="w-full rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-sm font-mono text-zinc-100 placeholder:text-zinc-500"
               />
               <div className="flex gap-2 justify-end">
                 <button
@@ -1182,7 +1182,7 @@ export default function SettingsModal({
                     defaultValue={displayNames[subDetail] ?? ""}
                     placeholder="nickname"
                     onBlur={(e) => saveDisplayName(subDetail, e.target.value)}
-                    className="flex-1 min-w-0 rounded bg-zinc-800 border border-zinc-600 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500"
+                    className="flex-1 min-w-0 rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 placeholder:text-zinc-500"
                   />
                   {savedFlash === subDetail && (
                     <span className="text-[10px] text-emerald-400 shrink-0">✓ saved</span>
