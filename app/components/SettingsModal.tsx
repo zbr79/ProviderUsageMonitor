@@ -590,13 +590,9 @@ export default function SettingsModal({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => openDetail(a.email)}
-                        className="flex-1 min-w-0 text-left text-sm truncate"
+                        className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
                       >
-                        {displayNames[a.email] ? (
-                          <span className="text-zinc-200">{displayNames[a.email]}</span>
-                        ) : (
-                          <span className="text-zinc-600">set nickname…</span>
-                        )}
+                        {a.email}
                       </button>
                       <div className="flex items-center gap-0.5 shrink-0">
                       <button
@@ -660,8 +656,8 @@ export default function SettingsModal({
                       )}
                       </div>
                     </div>
-                    <div className="mt-1 text-xs text-zinc-500 truncate" title={a.email}>
-                      {a.email}
+                    <div className="mt-1 text-xs text-zinc-500 truncate">
+                      {displayNames[a.email] ?? "no nickname"}
                     </div>
                   </div>
                 ))
