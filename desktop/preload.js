@@ -1,12 +1,22 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+const secret = ipcRenderer.sendSync("get-usage-secret") ?? "";
+
+function listen(channel, cb) {
+  const listener = (_e, ...args) => cb(...args);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
+
 contextBridge.exposeInMainWorld("widget", {
+  secret,
   close: () => ipcRenderer.send("widget-close"),
   minimize: () => ipcRenderer.send("widget-minimize"),
   resize: (width, height, center) => ipcRenderer.send("widget-resize", width, height, center),
-  onBg: (cb) => ipcRenderer.on("widget-bg", (_e, v) => cb(v)),
-  onToggleExpand: (cb) => ipcRenderer.on("widget-toggle-expand", () => cb()),
-  onOpenSettings: (cb) => ipcRenderer.on("widget-open-settings", () => cb()),
+  onBg: (cb) => listen("widget-bg", cb),
+  onToggleExpand: (cb) => listen("widget-toggle-expand", () => cb()),
+  onOpenSettings: (cb) => listen("widget-open-settings", () => cb()),
+  onSettingsChanged: (cb) => listen("widget-settings-changed", () => cb()),
   showMenu: () => ipcRenderer.send("widget-show-menu"),
   startDrag: (sx, sy) => ipcRenderer.send("widget-drag-start", sx, sy),
   moveDrag: (sx, sy) => ipcRenderer.send("widget-drag-move", sx, sy),

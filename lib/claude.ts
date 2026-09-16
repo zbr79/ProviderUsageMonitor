@@ -45,7 +45,7 @@ export async function getClaudeUsage(): Promise<ClaudeUsage | null> {
     const data: ClaudeUsage = {
       email: typeof oauth?.emailAddress === 'string' ? oauth.emailAddress : null,
       displayName: typeof oauth?.displayName === 'string' ? oauth.displayName : null,
-      signedIn: signedIn || oauth != null,
+      signedIn,
       subscribed,
       subscriptionType: subType,
       billingType,

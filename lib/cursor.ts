@@ -32,6 +32,21 @@ export interface CursorUsage {
 let tokenCache: { at: number; token: string } | null = null
 let usageCache: { at: number; data: CursorUsage | null } | null = null
 
+function toIsoTimestamp(value: unknown): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const ms = value < 1e12 ? value * 1000 : value
+    const d = new Date(ms)
+    return Number.isNaN(d.getTime()) ? null : d.toISOString()
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const trimmed = value.trim()
+    if (/^\d+(\.\d+)?$/.test(trimmed)) return toIsoTimestamp(Number(trimmed))
+    const d = new Date(trimmed)
+    return Number.isNaN(d.getTime()) ? null : d.toISOString()
+  }
+  return null
+}
+
 async function readState(fn: (db: any) => string | null): Promise<string | null> {
   try {
     // @ts-expect-error node:sqlite types not in @types/node 20
@@ -151,10 +166,7 @@ export async function getCursorUsage(): Promise<CursorUsage | null> {
       autoPercentUsed: typeof pu?.autoPercentUsed === 'number' ? pu.autoPercentUsed : null,
       apiPercentUsed: typeof pu?.apiPercentUsed === 'number' ? pu.apiPercentUsed : null,
       totalPercentUsed: typeof pu?.totalPercentUsed === 'number' ? pu.totalPercentUsed : null,
-      billingCycleEnd:
-        typeof json?.billingCycleEnd === 'string' || typeof json?.billingCycleEnd === 'number'
-          ? new Date(Number(json.billingCycleEnd)).toISOString()
-          : null,
+      billingCycleEnd: toIsoTimestamp(json?.billingCycleEnd),
       totalSpend: typeof pu?.totalSpend === 'number' ? pu.totalSpend : null,
       limit: typeof pu?.limit === 'number' ? pu.limit : null,
       bonusSpend: typeof pu?.bonusSpend === 'number' ? pu.bonusSpend : null,

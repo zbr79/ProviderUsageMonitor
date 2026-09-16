@@ -1,4 +1,5 @@
 import { getSettings, saveSettings } from '@/lib/settings'
+import { requireLocalSecret } from '@/lib/secret'
 import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -9,6 +10,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireLocalSecret(req)
+  if (denied) return denied
   const body = await req.json()
   const current = await getSettings()
   const cursorEnabled =

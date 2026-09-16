@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface UsageWindow {
   status: string;
@@ -216,43 +217,24 @@ export default function Widget() {
   const increaseAt = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
-    (window as any).widget?.onBg?.((v: number) => {
-      const bright = v >= 0.45;
-      const dark = v < 0.3;
-      const wouldBeLight = bgBright !== null && bgBright < 0.5;
-      const shouldSwitch =
-        (dark && !wouldBeLight) ||
-        (bright && wouldBeLight) ||
-        bgBright === null;
-      if (shouldSwitch) setBgBright(v);
+    const off = (window as any).widget?.onBg?.((v: number) => {
+      setBgBright((prev) => {
+        const bright = v >= 0.45;
+        const dark = v < 0.3;
+        const wouldBeLight = prev !== null && prev < 0.5;
+        const shouldSwitch =
+          (dark && !wouldBeLight) ||
+          (bright && wouldBeLight) ||
+          prev === null;
+        return shouldSwitch ? v : prev;
+      });
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bgBright]);
-
-  useEffect(() => {
-    (window as any).widget?.onToggleExpand?.(() => setExpanded((e) => !e));
+    return () => off?.();
   }, []);
 
   useEffect(() => {
-    const id = setInterval(async () => {
-      try {
-        const res = await fetch("/api/settings", { cache: "no-store" });
-        const s = await res.json();
-        const names = s.settings?.displayNames ?? {};
-        setDisplayNames((prev) =>
-          JSON.stringify(prev) === JSON.stringify(names) ? prev : names,
-        );
-        setShowProviderNames(s.settings?.showProviderNames === true);
-        setThemeMode(s.settings?.themeMode ?? "auto");
-        setCursorEnabled(s.settings?.cursorEnabled !== false);
-        setGrokEnabled(s.settings?.grokEnabled !== false);
-        setCodexEnabled(s.settings?.codexEnabled !== false);
-        setClaudeEnabled(s.settings?.claudeEnabled !== false);
-      } catch {
-        // ignore transient errors
-      }
-    }, 5000);
-    return () => clearInterval(id);
+    const off = (window as any).widget?.onToggleExpand?.(() => setExpanded((e) => !e));
+    return () => off?.();
   }, []);
 
   useEffect(() => {
@@ -301,33 +283,41 @@ export default function Widget() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [usageRes, cursorRes, settingsRes, codexRes, claudeRes] = await Promise.all([
-        fetch("/api/usage", { cache: "no-store" }),
-        fetch("/api/cursor", { cache: "no-store" }),
-        fetch("/api/settings", { cache: "no-store" }),
-        fetch("/api/codex", { cache: "no-store" }),
-        fetch("/api/claude", { cache: "no-store" }),
-      ]);
-      const json = await usageRes.json();
-      const cjson = await cursorRes.json();
+      const settingsRes = await apiFetch("/api/settings", { cache: "no-store" });
       const sjson = await settingsRes.json();
-      const xjson = await codexRes.json();
-      const ljson = await claudeRes.json();
-      setCodexEnabled(sjson.settings?.codexEnabled !== false);
-      setCodex(xjson.usage ?? null);
-      setClaudeEnabled(sjson.settings?.claudeEnabled !== false);
-      setClaude(ljson.usage ?? null);
-      setCursorEnabled(sjson.settings?.cursorEnabled !== false);
-      setGrokEnabled(sjson.settings?.grokEnabled !== false);
+      const nextCursorEnabled = sjson.settings?.cursorEnabled !== false;
+      const nextGrokEnabled = sjson.settings?.grokEnabled !== false;
+      const nextCodexEnabled = sjson.settings?.codexEnabled !== false;
+      const nextClaudeEnabled = sjson.settings?.claudeEnabled !== false;
+      setCodexEnabled(nextCodexEnabled);
+      setClaudeEnabled(nextClaudeEnabled);
+      setCursorEnabled(nextCursorEnabled);
+      setGrokEnabled(nextGrokEnabled);
       setDisplayNames(sjson.settings?.displayNames ?? {});
       setShowProviderNames(sjson.settings?.showProviderNames === true);
       setThemeMode(sjson.settings?.themeMode ?? "auto");
-      setCursorError(!!cjson.error);
-      if (!cjson.error) setCursor(cjson.usage);
-      if (sjson.settings?.cursorEnabled === false) {
+
+      const [usageRes, cursorRes, codexRes, claudeRes] = await Promise.all([
+        apiFetch("/api/usage", { cache: "no-store" }),
+        nextCursorEnabled || nextGrokEnabled
+          ? apiFetch("/api/cursor", { cache: "no-store" })
+          : Promise.resolve(null),
+        nextCodexEnabled ? apiFetch("/api/codex", { cache: "no-store" }) : Promise.resolve(null),
+        nextClaudeEnabled ? apiFetch("/api/claude", { cache: "no-store" }) : Promise.resolve(null),
+      ]);
+      const json = await usageRes.json();
+      if (!cursorRes) {
         setCursor(null);
         setCursorError(false);
+      } else {
+        const cjson = await cursorRes.json();
+        setCursorError(!!cjson.error);
+        setCursor(cjson.usage ?? null);
       }
+      if (!codexRes) setCodex(null);
+      else setCodex((await codexRes.json()).usage ?? null);
+      if (!claudeRes) setClaude(null);
+      else setClaude((await claudeRes.json()).usage ?? null);
       const accounts: AccountRow[] = json.accounts ?? [];
       const ts = Date.now();
       for (const row of accounts) {
@@ -364,6 +354,11 @@ export default function Widget() {
     return () => clearInterval(id);
   }, [load]);
 
+  useEffect(() => {
+    const off = (window as any).widget?.onSettingsChanged?.(() => load());
+    return () => off?.();
+  }, [load]);
+
   const sortedRows = useMemo(() => {
     if (!rows) return null;
     const lastChanged = (r: AccountRow) => lastChange.current.get(r.email)?.at ?? 0;
@@ -383,8 +378,16 @@ export default function Widget() {
 
   const copyKey = async (email: string) => {
     try {
-      const res = await fetch(`/api/key?email=${encodeURIComponent(email)}`);
+      const res = await apiFetch(`/api/key?email=${encodeURIComponent(email)}`);
+      if (!res.ok) {
+        toastError("Copy failed");
+        return;
+      }
       const json = await res.json();
+      if (typeof json.key !== "string" || !json.key) {
+        toastError("Copy failed");
+        return;
+      }
       await navigator.clipboard.writeText(json.key);
       toastSuccess("Key copied");
     } catch {
@@ -593,7 +596,7 @@ export default function Widget() {
   };
 
   const renderGrokCard = () => {
-    if (!cursorEnabled || !grokEnabled) return null;
+    if (!grokEnabled) return null;
     if (cursor?.grokPercentUsed == null) return null;
     const pct = cursor.grokPercentUsed;
     const exhausted = pct >= 100;
@@ -765,15 +768,12 @@ export default function Widget() {
             {badge}
           </span>
         </div>
-        <div className="flex gap-2">
-          <MiniBar
-            label="Usage"
-            w={{ status: "ok", percent: 0, resetsAt: "" }}
-            dimmed={!claude?.subscribed}
-            increased={false}
-            light={light}
-            reset={null}
-          />
+        <div className={`text-[10px] ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+          {!claude
+            ? "unavailable"
+            : !claude.signedIn
+              ? "not signed in"
+              : claude.email ?? "signed in"}
         </div>
       </div>
     );
@@ -790,7 +790,7 @@ export default function Widget() {
             : ""
         }
       >
-{activeRow === null && cursor === null ? (
+          {rows === null ? (
             <div className={`text-[11px] px-1 py-2 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
               Loading…
             </div>
