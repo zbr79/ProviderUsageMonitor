@@ -446,13 +446,13 @@ export default function SettingsModal({
             className={mainTabClass("system")}
             onClick={() => setMainTab("system")}
           >
-            System Settings
+            General
           </button>
           <button
             className={mainTabClass("accounts")}
             onClick={() => setMainTab("accounts")}
           >
-            Account Management
+            Accounts
           </button>
         </div>
 
