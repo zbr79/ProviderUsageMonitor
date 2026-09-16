@@ -1069,7 +1069,6 @@ export default function SettingsModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 min-w-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-base font-bold text-zinc-100">
@@ -1110,6 +1109,47 @@ export default function SettingsModal({
                       {claudeStatus === "not subscribed" ? "Free" : claudeStatus}
                     </span>
                   )}
+                  <button
+                    onClick={() => {
+                      if (subDetail === "cursor") toggleCursor(!cursorEnabled);
+                      else if (subDetail === "grok") toggleGrok(!grokEnabled);
+                      else if (subDetail === "codex") toggleCodex(!codexEnabled);
+                      else toggleClaude(!claudeEnabled);
+                    }}
+                    title="Monitoring"
+                    className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
+                      (subDetail === "cursor"
+                        ? cursorEnabled
+                        : subDetail === "grok"
+                          ? grokEnabled
+                          : subDetail === "codex"
+                            ? codexEnabled
+                            : claudeEnabled)
+                        ? "bg-emerald-500 border-emerald-400"
+                        : "bg-zinc-800 border-zinc-600"
+                    }`}
+                  >
+                    {(subDetail === "cursor"
+                      ? cursorEnabled
+                      : subDetail === "grok"
+                        ? grokEnabled
+                        : subDetail === "codex"
+                          ? codexEnabled
+                          : claudeEnabled) && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-2.5 w-2.5"
+                      >
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
                 <div className="text-xs text-zinc-500 truncate">
                   {(subDetail === "codex"
@@ -1118,48 +1158,6 @@ export default function SettingsModal({
                       ? claudeAccount
                       : cursorAccount) ?? "account unavailable"}
                 </div>
-              </div>
-              <button
-                onClick={() => {
-                  if (subDetail === "cursor") toggleCursor(!cursorEnabled);
-                  else if (subDetail === "grok") toggleGrok(!grokEnabled);
-                  else if (subDetail === "codex") toggleCodex(!codexEnabled);
-                  else toggleClaude(!claudeEnabled);
-                }}
-                title="Monitoring"
-                className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
-                  (subDetail === "cursor"
-                    ? cursorEnabled
-                    : subDetail === "grok"
-                      ? grokEnabled
-                      : subDetail === "codex"
-                        ? codexEnabled
-                        : claudeEnabled)
-                    ? "bg-emerald-500 border-emerald-400"
-                    : "bg-zinc-800 border-zinc-600"
-                }`}
-              >
-                {(subDetail === "cursor"
-                  ? cursorEnabled
-                  : subDetail === "grok"
-                    ? grokEnabled
-                    : subDetail === "codex"
-                      ? codexEnabled
-                      : claudeEnabled) && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-2.5 w-2.5"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                )}
-              </button>
               </div>
               <button
                 onClick={() => setSubDetail(null)}
