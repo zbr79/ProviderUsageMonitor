@@ -27,7 +27,10 @@ export async function POST(req: NextRequest) {
       ? body.showProviderNames
       : current.showProviderNames
   const themeMode =
-    body?.themeMode === 'light' || body?.themeMode === 'dark' || body?.themeMode === 'auto'
+    body?.themeMode === 'light' ||
+    body?.themeMode === 'dark' ||
+    body?.themeMode === 'white' ||
+    body?.themeMode === 'auto'
       ? body.themeMode
       : current.themeMode
   const displayNames =

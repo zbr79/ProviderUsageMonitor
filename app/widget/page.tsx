@@ -212,7 +212,7 @@ export default function Widget() {
   const [claude, setClaude] = useState<ClaudeUsage | null>(null);
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [showProviderNames, setShowProviderNames] = useState(false);
-  const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">("auto");
+  const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark" | "white">("auto");
   const lastChange = useRef<Map<string, { at: number }>>(new Map());
   const increaseAt = useRef<Map<string, number>>(new Map());
 
@@ -261,11 +261,13 @@ export default function Widget() {
   };
 
   const light =
-    themeMode === "light"
+    themeMode === "light" || themeMode === "white"
       ? true
       : themeMode === "dark"
         ? false
         : bgBright !== null && bgBright < 0.5;
+  const cardBg =
+    themeMode === "white" ? "bg-white" : light ? "bg-zinc-200" : "bg-zinc-900";
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -406,9 +408,7 @@ export default function Widget() {
     return (
       <div
         key={row.email}
-        className={`rounded-lg p-2 transition-colors duration-700 ${
-          light ? "bg-zinc-200" : "bg-zinc-900"
-        } ${
+        className={`rounded-lg p-2 transition-colors duration-700 ${cardBg} ${
           disabled
             ? `${light ? "border border-zinc-300/70" : "border border-white/10"} opacity-55`
             : exhausted
@@ -506,9 +506,7 @@ export default function Widget() {
   const renderCursorCard = () => {
     if (!cursorEnabled) return null;
     if (!cursor) {
-      const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
-        light ? "bg-zinc-200" : "bg-zinc-900"
-      } ${light ? "border border-zinc-400/50" : "border border-white/15"}`;
+      const cardClass = `rounded-lg p-2 transition-colors duration-700 ${cardBg} ${light ? "border border-zinc-400/50" : "border border-white/15"}`;
       return (
         <div className={cardClass}>
           <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
@@ -529,9 +527,7 @@ export default function Widget() {
     }
     const total = cursor.totalPercentUsed ?? 0;
     const exhausted = total >= 100;
-    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
-      light ? "bg-zinc-200" : "bg-zinc-900"
-    } ${
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${cardBg} ${
       exhausted
         ? light
           ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
@@ -552,7 +548,7 @@ export default function Widget() {
             className={`text-[11px] truncate flex-1 font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}
             title={cursor?.accountName ?? ""}
           >
-            {showProviderNames ? "Cursor" : displayNames["cursor"] ?? cursor?.accountName ?? "crsr"}
+            {showProviderNames ? "Cursor" : displayNames["cursor"] ?? cursor?.accountName ?? "Cursor"}
           </span>
           {cursor?.planName && (
             <span
@@ -604,9 +600,7 @@ export default function Widget() {
     if (cursor?.grokPercentUsed == null) return null;
     const pct = cursor.grokPercentUsed;
     const exhausted = pct >= 100;
-    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
-      light ? "bg-zinc-200" : "bg-zinc-900"
-    } ${
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${cardBg} ${
       exhausted
         ? light
           ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
@@ -664,9 +658,7 @@ export default function Widget() {
     if (!codexEnabled) return null;
     const pct = codex?.usedPercent ?? 0;
     const exhausted = codex?.limitReached === true || pct >= 100;
-    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
-      light ? "bg-zinc-200" : "bg-zinc-900"
-    } ${
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${cardBg} ${
       exhausted
         ? light
           ? "border border-red-400/80 shadow-[0_0_14px_rgba(239,68,68,0.45)]"
@@ -751,9 +743,7 @@ export default function Widget() {
           : light
             ? "bg-blue-100 text-blue-700 border border-blue-300"
             : "bg-blue-500/15 text-blue-300 border border-blue-400/30";
-    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${
-      light ? "bg-zinc-200" : "bg-zinc-900"
-    } ${light ? "border border-zinc-400/50" : "border border-white/15"}`;
+    const cardClass = `rounded-lg p-2 transition-colors duration-700 ${cardBg} ${light ? "border border-zinc-400/50" : "border border-white/15"}`;
     return (
       <div className={cardClass}>
         <div

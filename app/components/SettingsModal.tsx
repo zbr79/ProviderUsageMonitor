@@ -28,7 +28,7 @@ export default function SettingsModal({
   const [claudeAccount, setClaudeAccount] = useState<string | null>(null);
   const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
   const [showProviderNames, setShowProviderNames] = useState(false);
-  const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark">("auto");
+  const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark" | "white">("auto");
   const [mainTab, setMainTab] = useState<"system" | "accounts">("accounts");
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragState = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
@@ -208,7 +208,7 @@ export default function SettingsModal({
     }
   };
 
-  const setTheme = async (mode: "auto" | "light" | "dark") => {
+  const setTheme = async (mode: "auto" | "light" | "dark" | "white") => {
     setThemeMode(mode);
     try {
       const res = await apiFetch("/api/settings", {
@@ -466,7 +466,7 @@ export default function SettingsModal({
                 </div>
               </div>
               <div className="flex rounded-lg overflow-hidden border border-zinc-700 shrink-0">
-                {(["auto", "light", "dark"] as const).map((m) => (
+                {(["auto", "light", "white", "dark"] as const).map((m) => (
                   <button
                     key={m}
                     onClick={() => setTheme(m)}

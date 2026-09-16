@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 
-export type ThemeMode = 'auto' | 'light' | 'dark'
+export type ThemeMode = 'auto' | 'light' | 'dark' | 'white'
 
 export interface Settings {
   cursorEnabled: boolean
@@ -26,7 +26,7 @@ export async function getSettings(): Promise<Settings> {
       codexEnabled: parsed?.codexEnabled !== false,
       claudeEnabled: parsed?.claudeEnabled !== false,
       showProviderNames: parsed?.showProviderNames === true,
-      themeMode: mode === 'light' || mode === 'dark' ? mode : 'auto',
+      themeMode: mode === 'light' || mode === 'dark' || mode === 'white' ? mode : 'auto',
       displayNames:
         parsed?.displayNames && typeof parsed.displayNames === 'object'
           ? parsed.displayNames
