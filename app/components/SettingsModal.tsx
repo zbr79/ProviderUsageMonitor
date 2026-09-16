@@ -905,49 +905,47 @@ export default function SettingsModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-base font-bold text-zinc-100">OpenCode</h3>
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
-                      Go
-                    </span>
-                  </div>
-                  <div className="text-xs text-zinc-500 truncate">{detailEmail}</div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-bold text-zinc-100">OpenCode</h3>
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-400/30">
+                    Go
+                  </span>
+                  <button
+                    onClick={() =>
+                      toggleAccount(
+                        detailEmail,
+                        disabledAccounts.includes(detailEmail.toLowerCase()),
+                      )
+                    }
+                    title={
+                      disabledAccounts.includes(detailEmail.toLowerCase())
+                        ? "Enable account"
+                        : "Disable account"
+                    }
+                    className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
+                      disabledAccounts.includes(detailEmail.toLowerCase())
+                        ? "bg-zinc-800 border-zinc-600"
+                        : "bg-emerald-500 border-emerald-400"
+                    }`}
+                  >
+                    {!disabledAccounts.includes(detailEmail.toLowerCase()) && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-2.5 w-2.5"
+                      >
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={() =>
-                    toggleAccount(
-                      detailEmail,
-                      disabledAccounts.includes(detailEmail.toLowerCase()),
-                    )
-                  }
-                  title={
-                    disabledAccounts.includes(detailEmail.toLowerCase())
-                      ? "Enable account"
-                      : "Disable account"
-                  }
-                  className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
-                    disabledAccounts.includes(detailEmail.toLowerCase())
-                      ? "bg-zinc-800 border-zinc-600"
-                      : "bg-emerald-500 border-emerald-400"
-                  }`}
-                >
-                  {!disabledAccounts.includes(detailEmail.toLowerCase()) && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-2.5 w-2.5"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                </button>
+                <div className="text-xs text-zinc-500 truncate">{detailEmail}</div>
               </div>
               <button
                 onClick={() => setDetailEmail(null)}
