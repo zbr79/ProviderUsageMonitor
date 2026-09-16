@@ -600,39 +600,6 @@ export default function SettingsModal({
                       </button>
                       <div className="flex items-center gap-0.5 shrink-0">
                       <button
-                        onClick={() =>
-                          toggleAccount(
-                            a.email,
-                            disabledAccounts.includes(a.email.toLowerCase()),
-                          )
-                        }
-                        title={
-                          disabledAccounts.includes(a.email.toLowerCase())
-                            ? "Enable account"
-                            : "Disable account"
-                        }
-                        className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
-                          disabledAccounts.includes(a.email.toLowerCase())
-                            ? "bg-zinc-800 border-zinc-600"
-                            : "bg-emerald-500 border-emerald-400"
-                        }`}
-                      >
-                        {!disabledAccounts.includes(a.email.toLowerCase()) && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="h-2.5 w-2.5"
-                          >
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        )}
-                      </button>
-                      <button
                         onClick={() => openDetail(a.email)}
                         title="Account details"
                         className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700 shrink-0"
@@ -705,27 +672,7 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleCursor(!cursorEnabled)}
-                  title={cursorEnabled ? "Disable cursor monitoring" : "Enable cursor monitoring"}
-                  className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${cursorEnabled ? "bg-emerald-500 border-emerald-400" : "bg-zinc-800 border-zinc-600"}`}
-                >
-                  {cursorEnabled && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-2.5 w-2.5"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                </button>
-                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+<span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
                   Cursor
                 </span>
                 <button
@@ -767,27 +714,7 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleGrok(!grokEnabled)}
-                    title={grokEnabled ? "Disable Grok Bot monitoring" : "Enable Grok Bot monitoring"}
-                    className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${grokEnabled ? "bg-emerald-500 border-emerald-400" : "bg-zinc-800 border-zinc-600"}`}
-                  >
-                    {grokEnabled && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-2.5 w-2.5"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                  </button>
-                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+  <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
                   Grok Bot
                 </span>
                   <button
@@ -829,27 +756,7 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleCodex(!codexEnabled)}
-                    title={codexEnabled ? "Disable Codex monitoring" : "Enable Codex monitoring"}
-                    className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${codexEnabled ? "bg-emerald-500 border-emerald-400" : "bg-zinc-800 border-zinc-600"}`}
-                  >
-                    {codexEnabled && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-2.5 w-2.5"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                  </button>
-                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+  <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
                   Codex
                 </span>
                   <button
@@ -897,27 +804,7 @@ export default function SettingsModal({
           <div className="space-y-2">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleClaude(!claudeEnabled)}
-                    title={claudeEnabled ? "Disable Claude monitoring" : "Enable Claude monitoring"}
-                    className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${claudeEnabled ? "bg-emerald-500 border-emerald-400" : "bg-zinc-800 border-zinc-600"}`}
-                  >
-                    {claudeEnabled && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-2.5 w-2.5"
-                    >
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                  </button>
-                <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
+  <span className="flex-1 min-w-0 text-sm font-medium text-zinc-200 truncate">
                   Claude
                 </span>
                   <button
@@ -1027,6 +914,42 @@ export default function SettingsModal({
               </button>
             </div>
             <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-zinc-400">Monitoring</div>
+                <button
+                  onClick={() =>
+                    toggleAccount(
+                      detailEmail,
+                      disabledAccounts.includes(detailEmail.toLowerCase()),
+                    )
+                  }
+                  title={
+                    disabledAccounts.includes(detailEmail.toLowerCase())
+                      ? "Enable account"
+                      : "Disable account"
+                  }
+                  className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
+                    disabledAccounts.includes(detailEmail.toLowerCase())
+                      ? "bg-zinc-800 border-zinc-600"
+                      : "bg-emerald-500 border-emerald-400"
+                  }`}
+                >
+                  {!disabledAccounts.includes(detailEmail.toLowerCase()) && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-2.5 w-2.5"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-xs text-zinc-400">Nickname</div>
@@ -1156,6 +1079,49 @@ export default function SettingsModal({
               </button>
             </div>
             <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-zinc-400">Monitoring</div>
+                <button
+                  onClick={() => {
+                    if (subDetail === "cursor") toggleCursor(!cursorEnabled);
+                    else if (subDetail === "grok") toggleGrok(!grokEnabled);
+                    else if (subDetail === "codex") toggleCodex(!codexEnabled);
+                    else toggleClaude(!claudeEnabled);
+                  }}
+                  className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
+                    (subDetail === "cursor"
+                      ? cursorEnabled
+                      : subDetail === "grok"
+                        ? grokEnabled
+                        : subDetail === "codex"
+                          ? codexEnabled
+                          : claudeEnabled)
+                      ? "bg-emerald-500 border-emerald-400"
+                      : "bg-zinc-800 border-zinc-600"
+                  }`}
+                >
+                  {(subDetail === "cursor"
+                    ? cursorEnabled
+                    : subDetail === "grok"
+                      ? grokEnabled
+                      : subDetail === "codex"
+                        ? codexEnabled
+                        : claudeEnabled) && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-2.5 w-2.5"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-xs text-zinc-400">Nickname</div>
