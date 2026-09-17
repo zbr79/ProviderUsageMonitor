@@ -301,25 +301,18 @@ export default function Widget() {
 
       const [usageRes, cursorRes, codexRes, claudeRes] = await Promise.all([
         apiFetch("/api/usage", { cache: "no-store" }),
-        nextCursorEnabled || nextGrokEnabled
-          ? apiFetch("/api/cursor", { cache: "no-store" })
-          : Promise.resolve(null),
-        nextCodexEnabled ? apiFetch("/api/codex", { cache: "no-store" }) : Promise.resolve(null),
-        nextClaudeEnabled ? apiFetch("/api/claude", { cache: "no-store" }) : Promise.resolve(null),
+        apiFetch("/api/cursor", { cache: "no-store" }),
+        apiFetch("/api/codex", { cache: "no-store" }),
+        apiFetch("/api/claude", { cache: "no-store" }),
       ]);
       const json = await usageRes.json();
-      if (!cursorRes) {
-        setCursor(null);
-        setCursorError(false);
-      } else {
+      {
         const cjson = await cursorRes.json();
         setCursorError(!!cjson.error);
         setCursor(cjson.usage ?? null);
       }
-      if (!codexRes) setCodex(null);
-      else setCodex((await codexRes.json()).usage ?? null);
-      if (!claudeRes) setClaude(null);
-      else setClaude((await claudeRes.json()).usage ?? null);
+      setCodex((await codexRes.json()).usage ?? null);
+      setClaude((await claudeRes.json()).usage ?? null);
       const accounts: AccountRow[] = json.accounts ?? [];
       const ts = Date.now();
       for (const row of accounts) {
