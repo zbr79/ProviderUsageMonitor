@@ -455,11 +455,7 @@ export default function Widget() {
             Go
           </span>
         </div>
-        {disabled ? (
-          <div className={`text-[10px] ${light ? "text-zinc-500" : "text-zinc-400"}`}>
-            monitoring off
-          </div>
-        ) : row.error ? (
+        {row.error ? (
           <div className="text-[10px] text-red-400">unavailable</div>
         ) : row.usage ? (
           <div className="flex gap-2">
