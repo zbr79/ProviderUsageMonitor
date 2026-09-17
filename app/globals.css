@@ -159,3 +159,6 @@ body {
 .settings-light .hover\:text-red-300:hover {
   color: #dc2626;
 }
+.settings-light img[src="/openai.png"] {
+  filter: invert(1);
+}
