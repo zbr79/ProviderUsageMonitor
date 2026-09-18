@@ -751,13 +751,11 @@ export default function Widget() {
             {badge}
           </span>
         </div>
-        <div className={`text-[10px] mb-1.5 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
-          {!claude
-            ? "unavailable"
-            : !claude.signedIn
-              ? "not signed in"
-              : claude.email ?? "signed in"}
-        </div>
+        {(!claude || !claude.signedIn) && (
+          <div className={`text-[10px] mb-1.5 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+            {!claude ? "unavailable" : "not signed in"}
+          </div>
+        )}
         <div className="flex gap-2">
           <MiniBar
             label="Usage"
