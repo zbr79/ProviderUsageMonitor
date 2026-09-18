@@ -597,7 +597,7 @@ export default function SettingsModal({
                 className={`px-3 py-1.5 rounded-lg text-sm ${
                   showAdd
                     ? "bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
-                    : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white"
                 }`}
               >
                 {showAdd ? "Cancel" : "+ Add"}
@@ -622,7 +622,7 @@ export default function SettingsModal({
                 <button
                   type="submit"
                   disabled={busy}
-                  className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-sm disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm disabled:opacity-50"
                 >
                   {busy ? "Adding…" : "Add account"}
                 </button>
@@ -1042,7 +1042,7 @@ export default function SettingsModal({
                 <button
                   onClick={saveNewKey}
                   disabled={keyBusy || !newKeyValue.trim()}
-                  className="px-3 py-1.5 rounded-lg text-sm bg-zinc-100 text-zinc-900 hover:bg-zinc-200 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg text-sm bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50"
                 >
                   {keyBusy ? "Saving…" : "Save"}
                 </button>
