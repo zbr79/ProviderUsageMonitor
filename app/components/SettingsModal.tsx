@@ -600,7 +600,7 @@ export default function SettingsModal({
                     : "bg-zinc-200 text-zinc-800 hover:bg-zinc-300"
                 }`}
               >
-                {showAdd ? "Cancel" : "+ Add"}
+                {showAdd ? "Cancel" : "New account"}
               </button>
             </div>
             {showAdd && (
