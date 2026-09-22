@@ -357,16 +357,15 @@ export default function Widget() {
   const sortedRows = useMemo(() => {
     if (!rows) return null;
     const lastChanged = (r: AccountRow) => lastChange.current.get(r.email)?.at ?? 0;
-    return [...rows].sort((a, b) => {
-      const da = a.enabled === false;
-      const db = b.enabled === false;
-      if (da !== db) return da ? 1 : -1;
-      const ea = isExhausted(a);
-      const eb = isExhausted(b);
-      if (ea !== eb) return ea ? 1 : -1;
-      if (ea) return earliestReset(a) - earliestReset(b);
-      return lastChanged(b) - lastChanged(a);
-    });
+    return rows
+      .filter((r) => r.enabled !== false)
+      .sort((a, b) => {
+        const ea = isExhausted(a);
+        const eb = isExhausted(b);
+        if (ea !== eb) return ea ? 1 : -1;
+        if (ea) return earliestReset(a) - earliestReset(b);
+        return lastChanged(b) - lastChanged(a);
+      });
   }, [rows]);
 
   const activeRow = sortedRows?.[0] ?? null;
