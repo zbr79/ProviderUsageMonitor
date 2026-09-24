@@ -77,6 +77,7 @@ Cursor / Codex / Claude read their tokens directly from each app's local credent
 ### Settings (right-click widget → Settings)
 - Per-provider tabs with on/off toggles, nickname editing, and account details
 - **Show provider names** master toggle — display `OpenCode / Cursor / Grok Bot / Codex / Claude` instead of nicknames on all cards
+- **DeepSeek Peak Hour Warning** toggle — show or hide the peak-hour countdown on the active OpenCode card
 - Add / remove / disable OpenCode accounts without touching files
 
 ### Ranking rules

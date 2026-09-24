@@ -9,6 +9,7 @@ export interface Settings {
   grokEnabled: boolean
   codexEnabled: boolean
   claudeEnabled: boolean
+  deepseekPeakHourWarning: boolean
   showProviderNames: boolean
   themeMode: ThemeMode
   panelTheme: PanelTheme
@@ -27,6 +28,7 @@ export async function getSettings(): Promise<Settings> {
       grokEnabled: parsed?.grokEnabled !== false,
       codexEnabled: parsed?.codexEnabled !== false,
       claudeEnabled: parsed?.claudeEnabled !== false,
+      deepseekPeakHourWarning: parsed?.deepseekPeakHourWarning !== false,
       showProviderNames: parsed?.showProviderNames === true,
       themeMode: mode === 'light' || mode === 'dark' || mode === 'white' ? mode : 'auto',
       panelTheme: parsed?.panelTheme === 'light' ? 'light' : 'dark',
@@ -44,6 +46,7 @@ export async function getSettings(): Promise<Settings> {
       grokEnabled: true,
       codexEnabled: true,
       claudeEnabled: true,
+      deepseekPeakHourWarning: true,
       showProviderNames: false,
       themeMode: 'auto',
       panelTheme: 'dark',

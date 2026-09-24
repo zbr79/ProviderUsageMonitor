@@ -207,6 +207,7 @@ export default function Widget() {
   const [cursorEnabled, setCursorEnabled] = useState(true);
   const [grokEnabled, setGrokEnabled] = useState(true);
   const [codexEnabled, setCodexEnabled] = useState(true);
+  const [deepseekPeakHourWarning, setDeepseekPeakHourWarning] = useState(true);
   const [codex, setCodex] = useState<CodexUsage | null>(null);
   const [claudeEnabled, setClaudeEnabled] = useState(true);
   const [claude, setClaude] = useState<ClaudeUsage | null>(null);
@@ -291,6 +292,7 @@ export default function Widget() {
       const nextGrokEnabled = sjson.settings?.grokEnabled !== false;
       const nextCodexEnabled = sjson.settings?.codexEnabled !== false;
       const nextClaudeEnabled = sjson.settings?.claudeEnabled !== false;
+      setDeepseekPeakHourWarning(sjson.settings?.deepseekPeakHourWarning !== false);
       setCodexEnabled(nextCodexEnabled);
       setClaudeEnabled(nextClaudeEnabled);
       setCursorEnabled(nextCursorEnabled);
@@ -435,11 +437,11 @@ export default function Widget() {
           <span className={`text-[11px] truncate font-medium ${light ? "text-zinc-800" : "text-zinc-100"}`}>
             {showProviderNames ? "OpenCode" : displayNames[row.email] ?? row.email.slice(0, 4)}
           </span>
-          {withControls && peakInfo.active && peakInfo.endAt ? (
+          {deepseekPeakHourWarning && withControls && peakInfo.active && peakInfo.endAt ? (
             <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-red-600" : "text-red-300"}`}>
               Peak Ends in {fmtDuration(peakInfo.endAt - now)}
             </span>
-          ) : withControls && peakInfo.nextStartAt ? (
+          ) : deepseekPeakHourWarning && withControls && peakInfo.nextStartAt ? (
             <span className={`text-[9px] font-medium whitespace-nowrap ${light ? "text-emerald-600" : "text-emerald-300"}`}>
               Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
             </span>

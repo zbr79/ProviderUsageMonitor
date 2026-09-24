@@ -25,6 +25,7 @@ export default function SettingsModal({
   const [codexAccount, setCodexAccount] = useState<string | null>(null);
   const [codexPlan, setCodexPlan] = useState<string | null>(null);
   const [claudeEnabled, setClaudeEnabled] = useState(true);
+  const [deepseekPeakHourWarning, setDeepseekPeakHourWarning] = useState(true);
   const [claudeAccount, setClaudeAccount] = useState<string | null>(null);
   const [claudeStatus, setClaudeStatus] = useState<string | null>(null);
   const [showProviderNames, setShowProviderNames] = useState(false);
@@ -84,6 +85,7 @@ export default function SettingsModal({
     setGrokEnabled(s.settings?.grokEnabled !== false);
     setCodexEnabled(s.settings?.codexEnabled !== false);
     setClaudeEnabled(s.settings?.claudeEnabled !== false);
+    setDeepseekPeakHourWarning(s.settings?.deepseekPeakHourWarning !== false);
     setShowProviderNames(s.settings?.showProviderNames === true);
     setThemeMode(s.settings?.themeMode ?? "auto");
     setPanelTheme(s.settings?.panelTheme === "light" ? "light" : "dark");
@@ -273,6 +275,27 @@ export default function SettingsModal({
     } catch {
       toastError("Save failed");
       setShowProviderNames(!enabled);
+    }
+  };
+
+  const toggleDeepseekPeakHourWarning = async (enabled: boolean) => {
+    setDeepseekPeakHourWarning(enabled);
+    try {
+      const res = await apiFetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deepseekPeakHourWarning: enabled }),
+      });
+      if (res.ok) {
+        toastSuccess(enabled ? "DeepSeek peak-hour warning on" : "DeepSeek peak-hour warning off");
+        onChanged();
+      } else {
+        toastError("Save failed");
+        setDeepseekPeakHourWarning(!enabled);
+      }
+    } catch {
+      toastError("Save failed");
+      setDeepseekPeakHourWarning(!enabled);
     }
   };
 
@@ -559,6 +582,37 @@ export default function SettingsModal({
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   )}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-3">
+              <div>
+                <div className="text-sm font-medium text-zinc-200">DeepSeek Peak Hour Warning</div>
+                <div className="text-xs text-zinc-500">
+                  Show peak-hour start/end countdowns on the OpenCode card
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Toggle DeepSeek Peak Hour Warning"
+                aria-pressed={deepseekPeakHourWarning}
+                onClick={() => toggleDeepseekPeakHourWarning(!deepseekPeakHourWarning)}
+                className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${deepseekPeakHourWarning ? "bg-emerald-500 border-emerald-400" : "bg-zinc-800 border-zinc-600"}`}
+              >
+                {deepseekPeakHourWarning && (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-2.5 w-2.5"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>

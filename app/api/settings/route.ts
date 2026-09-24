@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
     typeof body?.codexEnabled === 'boolean' ? body.codexEnabled : current.codexEnabled
   const claudeEnabled =
     typeof body?.claudeEnabled === 'boolean' ? body.claudeEnabled : current.claudeEnabled
+  const deepseekPeakHourWarning =
+    typeof body?.deepseekPeakHourWarning === 'boolean'
+      ? body.deepseekPeakHourWarning
+      : current.deepseekPeakHourWarning
   const showProviderNames =
     typeof body?.showProviderNames === 'boolean'
       ? body.showProviderNames
@@ -49,6 +53,7 @@ export async function POST(req: NextRequest) {
     grokEnabled,
     codexEnabled,
     claudeEnabled,
+    deepseekPeakHourWarning,
     showProviderNames,
     themeMode,
     panelTheme,
