@@ -91,6 +91,19 @@ Cursor / Codex / Claude read their tokens directly from each app's local credent
 | `npm run dev` | Development server on http://127.0.0.1:3100 |
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build on http://127.0.0.1:3100 |
+| `npm test` | Unit tests (ranking, settings, local secret, account validation) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check without emitting files |
+
+## Development
+
+```bash
+npm test
+npm run lint
+npm run typecheck
+```
+
+Tests cover the ranking rules, reset and peak-hour formatting, settings defaults, the local API secret, and account create/delete validation. They do not call provider APIs or read Cursor, Codex, or Claude credentials.
 
 ## Project layout
 
