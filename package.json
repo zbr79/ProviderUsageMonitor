@@ -1,6 +1,7 @@
 {
   "name": "provider-usage-monitor",
   "version": "0.1.0",
+  "description": "Local desktop widget that tracks AI subscription usage for OpenCode, Cursor, Grok, Codex, and Claude.",
   "private": true,
   "scripts": {
     "dev": "next dev -H 127.0.0.1 -p 3100",

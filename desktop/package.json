@@ -1,6 +1,7 @@
 {
   "name": "provider-usage-widget",
   "version": "1.0.0",
+  "description": "Electron window for Provider Usage Monitor.",
   "private": true,
   "main": "main.js",
   "scripts": {
