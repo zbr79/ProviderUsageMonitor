@@ -123,6 +123,8 @@ export default function SettingsModal({
   };
 
   useEffect(() => {
+    // Load accounts and settings when the modal opens.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data load on mount
     refresh();
   }, []);
 

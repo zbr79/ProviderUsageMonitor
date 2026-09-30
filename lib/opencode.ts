@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import { dataDir } from '@/lib/data-dir'
 
 export interface Account {
   email: string
@@ -18,13 +19,15 @@ export interface Usage {
   monthly: UsageWindow
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data')
-const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json')
 const USAGE_URL = 'https://opencode.ai/zen/go/v1/usage'
+
+function accountsFile(): string {
+  return path.join(dataDir(), 'accounts.json')
+}
 
 export async function getAccounts(): Promise<Account[]> {
   try {
-    const raw = await fs.readFile(ACCOUNTS_FILE, 'utf8')
+    const raw = await fs.readFile(accountsFile(), 'utf8')
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed : []
   } catch {
@@ -33,8 +36,9 @@ export async function getAccounts(): Promise<Account[]> {
 }
 
 export async function saveAccounts(accounts: Account[]): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true })
-  await fs.writeFile(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2), 'utf8')
+  const file = accountsFile()
+  await fs.mkdir(path.dirname(file), { recursive: true })
+  await fs.writeFile(file, JSON.stringify(accounts, null, 2), 'utf8')
 }
 
 const usageCache = new Map<string, { at: number; data: Usage | null }>()

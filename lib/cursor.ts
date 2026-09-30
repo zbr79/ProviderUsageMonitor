@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
+import { toIsoTimestamp } from '@/lib/time'
 
 const STATE_DB = path.join(
   process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'),
@@ -32,22 +33,14 @@ export interface CursorUsage {
 let tokenCache: { at: number; token: string } | null = null
 let usageCache: { at: number; data: CursorUsage | null } | null = null
 
-function toIsoTimestamp(value: unknown): string | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const ms = value < 1e12 ? value * 1000 : value
-    const d = new Date(ms)
-    return Number.isNaN(d.getTime()) ? null : d.toISOString()
+interface CursorStateDb {
+  prepare: (sql: string) => {
+    get: (key: string) => { value?: string } | undefined
   }
-  if (typeof value === 'string' && value.trim()) {
-    const trimmed = value.trim()
-    if (/^\d+(\.\d+)?$/.test(trimmed)) return toIsoTimestamp(Number(trimmed))
-    const d = new Date(trimmed)
-    return Number.isNaN(d.getTime()) ? null : d.toISOString()
-  }
-  return null
+  close: () => void
 }
 
-async function readState(fn: (db: any) => string | null): Promise<string | null> {
+async function readState(fn: (db: CursorStateDb) => string | null): Promise<string | null> {
   try {
     // @ts-expect-error node:sqlite types not in @types/node 20
     const mod = await import('node:sqlite')

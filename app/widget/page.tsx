@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
 import { apiFetch } from "@/lib/api-fetch";
+import { usageWidget } from "@/lib/desktop-bridge";
+import {
+  fmtDuration,
+  getPeakInfo,
+  isExhausted,
+  isExhaustedWindow,
+  resetFmt,
+  sortAccounts,
+} from "@/lib/ranking";
 
 interface UsageWindow {
   status: string;
@@ -65,88 +74,6 @@ function windowColor(w: UsageWindow): string {
   return "bg-red-400";
 }
 
-function isExhaustedWindow(w: UsageWindow): boolean {
-  return w.percent >= 100 || w.status === "exhausted";
-}
-
-function isExhausted(r: AccountRow): boolean {
-  return (
-    !!r.usage &&
-    (isExhaustedWindow(r.usage.monthly) || isExhaustedWindow(r.usage.weekly))
-  );
-}
-
-function earliestReset(r: AccountRow): number {
-  const u = r.usage;
-  if (!u) return 0;
-  const times: number[] = [];
-  if (isExhaustedWindow(u.monthly)) times.push(new Date(u.monthly.resetsAt).getTime());
-  if (isExhaustedWindow(u.weekly)) times.push(new Date(u.weekly.resetsAt).getTime());
-  return times.length ? Math.min(...times) : 0;
-}
-
-function resetsIn(resetsAt: string): string {
-  const ms = new Date(resetsAt).getTime() - Date.now();
-  if (ms <= 0) return "now";
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
-  return `${h}h ${m}m`;
-}
-
-function utcOf(d: Date, hour: number): number {
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hour, 0, 0);
-}
-
-function getPeakInfo(now: Date): { active: boolean; endAt: number | null; nextStartAt: number | null } {
-  const h = now.getUTCHours();
-  const day = now.getUTCDay();
-  const isWeekday = day >= 1 && day <= 5;
-
-  if (isWeekday) {
-    if (h >= 1 && h < 4) return { active: true, endAt: utcOf(now, 4), nextStartAt: null };
-    if (h >= 6 && h < 10) return { active: true, endAt: utcOf(now, 10), nextStartAt: null };
-  }
-
-  const candidates: number[] = [];
-  if (isWeekday) {
-    if (h < 1) candidates.push(utcOf(now, 1));
-    if (h >= 4 && h < 6) candidates.push(utcOf(now, 6));
-  }
-  for (let i = 1; i <= 7; i++) {
-    const d = new Date(now.getTime() + i * 86400000);
-    if (d.getUTCDay() >= 1 && d.getUTCDay() <= 5) {
-      candidates.push(utcOf(d, 1));
-      break;
-    }
-  }
-  const next = candidates
-    .filter((c) => c > now.getTime())
-    .sort((a, b) => a - b)[0] ?? null;
-  return { active: false, endAt: null, nextStartAt: next };
-}
-
-function fmtDuration(ms: number): string {
-  if (ms <= 0) return "0m";
-  const m = Math.floor(ms / 60000);
-  const h = Math.floor(m / 60);
-  const rem = m % 60;
-  if (h > 0) return `${h}h ${rem}m`;
-  return `${rem}m`;
-}
-
-function resetFmt(resetsAt: string): string {
-  const ms = new Date(resetsAt).getTime() - Date.now();
-  if (ms <= 0) return "0m";
-  const m = Math.floor(ms / 60000);
-  const d = Math.floor(m / 1440);
-  const h = Math.floor((m % 1440) / 60);
-  const mm = m % 60;
-  if (d > 0) return `${d}d ${h}h ${mm}m`;
-  if (h > 0) return `${h}h ${mm}m`;
-  return `${mm}m`;
-}
-
 function fmtPct(v: number): string {
   const r = Math.round(v * 10) / 10;
   if (r > 99 && r < 100) return r.toFixed(1);
@@ -199,7 +126,6 @@ function MiniBar({
 export default function Widget() {
   const [rows, setRows] = useState<AccountRow[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [bgBright, setBgBright] = useState<number | null>(null);
   const [cursor, setCursor] = useState<CursorUsage | null>(null);
@@ -214,11 +140,11 @@ export default function Widget() {
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
   const [showProviderNames, setShowProviderNames] = useState(false);
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark" | "white">("auto");
-  const lastChange = useRef<Map<string, { at: number }>>(new Map());
-  const increaseAt = useRef<Map<string, number>>(new Map());
+  const [changedAt, setChangedAt] = useState<Map<string, number>>(() => new Map());
+  const [increaseAt, setIncreaseAt] = useState<Map<string, number>>(() => new Map());
 
   useEffect(() => {
-    const off = (window as any).widget?.onBg?.((v: number) => {
+    const off = usageWidget()?.onBg?.((v: number) => {
       setBgBright((prev) => {
         const bright = v >= 0.45;
         const dark = v < 0.3;
@@ -234,14 +160,14 @@ export default function Widget() {
   }, []);
 
   useEffect(() => {
-    const off = (window as any).widget?.onToggleExpand?.(() => setExpanded((e) => !e));
+    const off = usageWidget()?.onToggleExpand?.(() => setExpanded((e) => !e));
     return () => off?.();
   }, []);
 
   useEffect(() => {
     const onCtx = (e: MouseEvent) => {
       e.preventDefault();
-      (window as any).widget?.showMenu();
+      usageWidget()?.showMenu?.();
     };
     document.addEventListener("contextmenu", onCtx);
     return () => document.removeEventListener("contextmenu", onCtx);
@@ -249,11 +175,11 @@ export default function Widget() {
 
   const onDragStart = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
-    const w = window as any;
-    w.widget?.startDrag(e.screenX, e.screenY);
-    const move = (ev: MouseEvent) => w.widget?.moveDrag(ev.screenX, ev.screenY);
+    const widget = usageWidget();
+    widget?.startDrag?.(e.screenX, e.screenY);
+    const move = (ev: MouseEvent) => widget?.moveDrag?.(ev.screenX, ev.screenY);
     const up = () => {
-      w.widget?.endDrag();
+      widget?.endDrag?.();
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
     };
@@ -278,13 +204,12 @@ export default function Widget() {
   useEffect(() => {
     const t = setTimeout(() => {
       const h = document.body?.scrollHeight ?? 0;
-      if (h > 0) (window as any).widget?.resize(238, h + 6);
+      if (h > 0) usageWidget()?.resize?.(238, h + 6);
     }, 80);
     return () => clearTimeout(t);
   }, [expanded, rows, cursor]);
 
   const load = useCallback(async () => {
-    setRefreshing(true);
     try {
       const settingsRes = await apiFetch("/api/settings", { cache: "no-store" });
       const sjson = await settingsRes.json();
@@ -317,58 +242,61 @@ export default function Widget() {
       setClaude((await claudeRes.json()).usage ?? null);
       const accounts: AccountRow[] = json.accounts ?? [];
       const ts = Date.now();
-      for (const row of accounts) {
-        if (row.lastChangeAt) {
-          const prev = lastChange.current.get(row.email);
-          if (!prev || row.lastChangeAt >= prev.at) {
-            lastChange.current.set(row.email, { at: row.lastChangeAt });
-          }
+      setChangedAt((prev) => {
+        let next = prev;
+        for (const row of accounts) {
+          if (row.lastChangeAt == null) continue;
+          const existing = next.get(row.email);
+          if (existing != null && row.lastChangeAt < existing) continue;
+          if (next === prev) next = new Map(prev);
+          next.set(row.email, row.lastChangeAt);
         }
-        if (row.usage && row.prev) {
+        return next;
+      });
+      setIncreaseAt((prev) => {
+        let next = prev;
+        for (const row of accounts) {
+          if (!row.usage || !row.prev) continue;
           for (const win of ["rolling", "weekly", "monthly"] as const) {
             const key = `${row.email}:${win}`;
             const cur = row.usage[win];
-            const prev = row.prev[win];
-            if (!isExhaustedWindow(cur) && cur.percent > prev.percent) {
-              if (!increaseAt.current.has(key)) increaseAt.current.set(key, ts);
-            } else {
-              increaseAt.current.delete(key);
+            const previous = row.prev[win];
+            const rising = !isExhaustedWindow(cur) && cur.percent > previous.percent;
+            if (rising) {
+              if (next.has(key)) continue;
+              if (next === prev) next = new Map(prev);
+              next.set(key, ts);
+            } else if (next.has(key)) {
+              if (next === prev) next = new Map(prev);
+              next.delete(key);
             }
           }
         }
-      }
+        return next;
+      });
       setRows(accounts);
     } catch {
       // widget stays silent on transient errors
-    } finally {
-      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
+    // Poll provider usage after mount. The fetch updates state when it resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data load on mount
     load();
     const id = setInterval(load, POLL_MS);
     return () => clearInterval(id);
   }, [load]);
 
   useEffect(() => {
-    const off = (window as any).widget?.onSettingsChanged?.(() => load());
+    const off = usageWidget()?.onSettingsChanged?.(() => load());
     return () => off?.();
   }, [load]);
 
   const sortedRows = useMemo(() => {
     if (!rows) return null;
-    const lastChanged = (r: AccountRow) => lastChange.current.get(r.email)?.at ?? 0;
-    return rows
-      .filter((r) => r.enabled !== false)
-      .sort((a, b) => {
-        const ea = isExhausted(a);
-        const eb = isExhausted(b);
-        if (ea !== eb) return ea ? 1 : -1;
-        if (ea) return earliestReset(a) - earliestReset(b);
-        return lastChanged(b) - lastChanged(a);
-      });
-  }, [rows]);
+    return sortAccounts(rows, (r) => changedAt.get(r.email) ?? 0);
+  }, [rows, changedAt]);
 
   const activeRow = sortedRows?.[0] ?? null;
 
@@ -396,7 +324,7 @@ export default function Widget() {
     const isInUse = !disabled && sortedRows?.[0]?.email === row.email;
     const exhausted = isExhausted(row);
     const showInc = (win: string) => {
-      const at = increaseAt.current.get(`${row.email}:${win}`);
+      const at = increaseAt.get(`${row.email}:${win}`);
       return !!at && Date.now() - at < 20000;
     };
     return (
@@ -771,7 +699,7 @@ export default function Widget() {
     );
   };
 
-  const peakInfo = useMemo(() => getPeakInfo(new Date(now)), [now]);
+  const peakInfo = getPeakInfo(new Date(now));
 
   return (
     <div className="w-screen p-1.5 select-none">
