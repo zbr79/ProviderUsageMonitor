@@ -1,6 +1,7 @@
 "use client";
 
-import Tabs, { type TabItem } from "@/app/components/ui/Tabs";
+import ProviderIcon from "@/app/components/ui/ProviderIcon";
+import Tabs, { tabDomId, tabPanelDomId, type TabItem } from "@/app/components/ui/Tabs";
 import OpenCodeAccountsPanel from "./OpenCodeAccountsPanel";
 import ProviderAccountPanel from "./ProviderAccountPanel";
 import type { AccountRow, ProviderTab, SubProvider } from "./types";
@@ -18,15 +19,9 @@ export default function AccountsTab({
   codexPlan,
   claudeAccount,
   claudeStatus,
-  showAdd,
-  newEmail,
-  newKey,
-  busy,
   confirmRemove,
-  onToggleAdd,
-  onChangeEmail,
-  onChangeKey,
-  onSubmitAdd,
+  now,
+  onAdd,
   onOpenDetail,
   onConfirmRemove,
   onRemoveAccount,
@@ -44,15 +39,9 @@ export default function AccountsTab({
   codexPlan: string | null;
   claudeAccount: string | null;
   claudeStatus: string | null;
-  showAdd: boolean;
-  newEmail: string;
-  newKey: string;
-  busy: boolean;
   confirmRemove: string | null;
-  onToggleAdd: () => void;
-  onChangeEmail: (v: string) => void;
-  onChangeKey: (v: string) => void;
-  onSubmitAdd: (e: React.FormEvent) => void;
+  now: number;
+  onAdd: () => void;
   onOpenDetail: (email: string) => void;
   onConfirmRemove: (email: string | null) => void;
   onRemoveAccount: (email: string) => void;
@@ -62,25 +51,24 @@ export default function AccountsTab({
     {
       id: "opencode",
       label: "OpenCode",
-      icon: <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+      icon: <ProviderIcon src="/opencode.ico" className="h-3.5 w-3.5 rounded-[3px]" />,
     },
     {
       id: "cursor",
       label: "Cursor",
-      icon: <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+      icon: <ProviderIcon src="/cursor.ico" className="h-3.5 w-3.5 rounded-[3px]" />,
     },
     {
       id: "grok",
       label: "Grok Bot",
-      icon: <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+      icon: <ProviderIcon src="/grokbot.ico" className="h-3.5 w-3.5 rounded-[3px]" />,
     },
     {
       id: "codex",
       label: "Codex",
       icon: (
-        <img
+        <ProviderIcon
           src="/openai.png"
-          alt=""
           className={`h-3.5 w-3.5 rounded-[3px] ${panelTheme === "light" ? "invert" : ""}`}
         />
       ),
@@ -88,28 +76,33 @@ export default function AccountsTab({
     {
       id: "claude",
       label: "Claude",
-      icon: <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+      icon: <ProviderIcon src="/claude.ico" className="h-3.5 w-3.5 rounded-[3px]" />,
     },
   ];
 
   return (
     <>
-      <Tabs items={providerTabs} active={tab} onSelect={onSelectTab} ariaLabel="Provider tabs" />
-      <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5">
+      <Tabs
+        items={providerTabs}
+        active={tab}
+        onSelect={onSelectTab}
+        ariaLabel="Provider tabs"
+        idPrefix="settings-provider"
+      />
+      <div
+        role="tabpanel"
+        id={tabPanelDomId("settings-provider", tab)}
+        aria-labelledby={tabDomId("settings-provider", tab)}
+        className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-5 pb-5"
+      >
         {tab === "opencode" ? (
           <OpenCodeAccountsPanel
             accounts={accounts}
             disabledAccounts={disabledAccounts}
             displayNames={displayNames}
-            showAdd={showAdd}
-            newEmail={newEmail}
-            newKey={newKey}
-            busy={busy}
             confirmRemove={confirmRemove}
-            onToggleAdd={onToggleAdd}
-            onChangeEmail={onChangeEmail}
-            onChangeKey={onChangeKey}
-            onSubmitAdd={onSubmitAdd}
+            now={now}
+            onAdd={onAdd}
             onOpenDetail={onOpenDetail}
             onConfirmRemove={onConfirmRemove}
             onRemoveAccount={onRemoveAccount}

@@ -1,24 +1,21 @@
 "use client";
 
 import Button from "@/app/components/ui/Button";
-import Field from "@/app/components/ui/Field";
 import IconButton, { GearIcon, TrashIcon } from "@/app/components/ui/IconButton";
 import { SETTINGS_TYPE_SCALE } from "@/lib/theme";
+import { accountLabels, accountNote, lookupName, resetParts } from "./account-labels";
 import type { AccountRow } from "./types";
+
+const iconButtonClass =
+  "inline-flex h-8 w-8 items-center justify-center rounded text-role-muted hover:bg-role-surface hover:text-role-text";
 
 export default function OpenCodeAccountsPanel({
   accounts,
   disabledAccounts,
   displayNames,
-  showAdd,
-  newEmail,
-  newKey,
-  busy,
   confirmRemove,
-  onToggleAdd,
-  onChangeEmail,
-  onChangeKey,
-  onSubmitAdd,
+  now,
+  onAdd,
   onOpenDetail,
   onConfirmRemove,
   onRemoveAccount,
@@ -26,126 +23,131 @@ export default function OpenCodeAccountsPanel({
   accounts: AccountRow[] | null;
   disabledAccounts: string[];
   displayNames: Record<string, string>;
-  showAdd: boolean;
-  newEmail: string;
-  newKey: string;
-  busy: boolean;
   confirmRemove: string | null;
-  onToggleAdd: () => void;
-  onChangeEmail: (v: string) => void;
-  onChangeKey: (v: string) => void;
-  onSubmitAdd: (e: React.FormEvent) => void;
+  now: number;
+  onAdd: () => void;
   onOpenDetail: (email: string) => void;
   onConfirmRemove: (email: string | null) => void;
   onRemoveAccount: (email: string) => void;
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <span className={`${SETTINGS_TYPE_SCALE.body} font-medium text-role-text`}>Accounts</span>
+      <div className="mb-1 flex justify-end">
         <Button
-          variant={showAdd ? "secondary" : "primary"}
-          onClick={onToggleAdd}
-          className={`px-3 py-1.5 ${SETTINGS_TYPE_SCALE.body}`}
+          type="button"
+          variant="secondary"
+          onClick={onAdd}
+          className={`h-8 px-3 ${SETTINGS_TYPE_SCALE.body}`}
         >
-          {showAdd ? "Cancel" : "Add"}
+          Add account
         </Button>
       </div>
-      {showAdd && (
-        <form onSubmit={onSubmitAdd} className="flex flex-col gap-2 mb-3">
-          <Field
-            id="opencode-new-email"
-            label="Email or label"
-            value={newEmail}
-            onChange={(e) => onChangeEmail(e.target.value)}
-            placeholder="email or label"
-            required
-            className="rounded-lg px-3 py-1"
-          />
-          <Field
-            id="opencode-new-key"
-            label="API key"
-            value={newKey}
-            onChange={(e) => onChangeKey(e.target.value)}
-            placeholder="sk-..."
-            required
-            mono
-            className="rounded-lg px-3 py-1"
-          />
-          <Button type="submit" disabled={busy} className={`px-4 py-2 ${SETTINGS_TYPE_SCALE.body}`}>
-            {busy ? "Adding…" : "Add account"}
-          </Button>
-        </form>
-      )}
-      <div className="space-y-2">
-        {accounts === null ? (
-          <div className={`${SETTINGS_TYPE_SCALE.body} text-role-muted`}>Loading…</div>
-        ) : accounts.length === 0 ? (
-          <div className={`${SETTINGS_TYPE_SCALE.body} text-role-muted`}>No accounts yet.</div>
-        ) : (
-          accounts.map((a) => (
-            <div
-              key={a.email}
-              className={`bg-role-surface border border-role-border rounded-lg px-3 py-2 ${
-                disabledAccounts.includes(a.email.toLowerCase()) ? "opacity-45" : ""
-              }`}
-            >
-              <div className="flex items-center gap-2">
+      {accounts === null ? (
+        <div className={`${SETTINGS_TYPE_SCALE.body} text-role-muted py-3`}>Loading…</div>
+      ) : accounts.length === 0 ? (
+        <div className={`${SETTINGS_TYPE_SCALE.body} text-role-muted py-3`}>No accounts yet.</div>
+      ) : (
+        <ul>
+          {accounts.map((a) => {
+            const hidden = disabledAccounts.includes(a.email.toLowerCase());
+            const { title, subtitle } = accountLabels(a.email, lookupName(displayNames, a.email));
+            const note = accountNote(hidden, Boolean(a.cached), Boolean(a.inactive));
+            const resets = resetParts(a.weekly, a.monthly, now);
+            const confirming = confirmRemove === a.email;
+            return (
+              <li
+                key={a.email}
+                className="flex items-center gap-2 border-b border-role-border py-2.5 last:border-b-0"
+              >
                 <button
                   type="button"
                   onClick={() => onOpenDetail(a.email)}
-                  className={`flex-1 min-w-0 text-left ${SETTINGS_TYPE_SCALE.body} text-role-text truncate`}
+                  className="min-w-0 flex-1 text-left"
                 >
-                  {a.email}
+                  <span className="flex items-baseline gap-3">
+                    <span
+                      className={`min-w-0 truncate ${SETTINGS_TYPE_SCALE.body} ${
+                        hidden ? "text-role-muted" : "text-role-text"
+                      }`}
+                    >
+                      {title}
+                    </span>
+                    {resets.length > 0 && (
+                      <span className={`ml-auto shrink-0 ${SETTINGS_TYPE_SCALE.caption}`}>
+                        {resets.map((part, index) => (
+                          <span key={part.text}>
+                            {index > 0 ? " · " : ""}
+                            <span className={part.full ? "text-role-danger" : "text-role-muted"}>
+                              {part.text}
+                            </span>
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
+                  {(subtitle || note) && (
+                    <span className="mt-0.5 flex items-baseline gap-3">
+                      {subtitle && (
+                        <span className={`min-w-0 truncate ${SETTINGS_TYPE_SCALE.caption} text-role-muted`}>
+                          {subtitle}
+                        </span>
+                      )}
+                      {note && (
+                        <span className={`ml-auto shrink-0 ${SETTINGS_TYPE_SCALE.caption} text-role-muted`}>
+                          {note}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </button>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <IconButton
-                    onClick={() => onOpenDetail(a.email)}
-                    title="Account details"
-                    aria-label={`Account details for ${a.email}`}
-                    className="p-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg"
-                  >
-                    <GearIcon />
-                  </IconButton>
-                  {confirmRemove === a.email ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onRemoveAccount(a.email);
-                          onConfirmRemove(null);
-                        }}
-                        className="text-[10px] px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-white shrink-0"
-                      >
-                        Remove
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onConfirmRemove(null)}
-                        className="text-[10px] px-2 py-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg shrink-0"
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
+                {confirming ? (
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onConfirmRemove(null)}
+                      className={`h-8 px-2 ${SETTINGS_TYPE_SCALE.caption}`}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      autoFocus
+                      onClick={() => {
+                        onRemoveAccount(a.email);
+                        onConfirmRemove(null);
+                      }}
+                      className={`h-8 px-2 ${SETTINGS_TYPE_SCALE.caption}`}
+                    >
+                      Remove
+                    </Button>
+                  </span>
+                ) : (
+                  <span className="flex shrink-0 items-center">
+                    <IconButton
+                      onClick={() => onOpenDetail(a.email)}
+                      title="Account details"
+                      aria-label={`Account details for ${a.email}`}
+                      className={iconButtonClass}
+                    >
+                      <GearIcon />
+                    </IconButton>
                     <IconButton
                       onClick={() => onConfirmRemove(a.email)}
                       title="Remove account"
                       aria-label={`Remove account ${a.email}`}
-                      className="p-1 rounded text-role-muted hover:text-role-danger hover:bg-role-bg"
+                      className={`${iconButtonClass} hover:text-role-danger`}
                     >
                       <TrashIcon />
                     </IconButton>
-                  )}
-                </div>
-              </div>
-              <div className={`mt-1 ${SETTINGS_TYPE_SCALE.caption} text-role-muted truncate`}>
-                {displayNames[a.email] ?? "no nickname"}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

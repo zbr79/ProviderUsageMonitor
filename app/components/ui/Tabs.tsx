@@ -9,18 +9,28 @@ export interface TabItem<T extends string> {
   icon?: ReactNode;
 }
 
+export function tabDomId(idPrefix: string, id: string): string {
+  return `${idPrefix}-${id}`;
+}
+
+export function tabPanelDomId(idPrefix: string, id: string): string {
+  return `${idPrefix}-panel-${id}`;
+}
+
 export default function Tabs<T extends string>({
   items,
   active,
   onSelect,
   ariaLabel,
   boldActive = false,
+  idPrefix = "tab",
 }: {
   items: TabItem<T>[];
   active: T;
   onSelect: (id: T) => void;
   ariaLabel?: string;
   boldActive?: boolean;
+  idPrefix?: string;
 }) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -60,6 +70,8 @@ export default function Tabs<T extends string>({
             }}
             type="button"
             role="tab"
+            id={tabDomId(idPrefix, item.id)}
+            aria-controls={tabPanelDomId(idPrefix, item.id)}
             aria-selected={isSelected}
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onSelect(item.id)}

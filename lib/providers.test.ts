@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseCursorUsage } from "@/lib/cursor";
 import { parseCodexUsage } from "@/lib/codex";
 import { parseClaudeUsage } from "@/lib/claude";
+import { parseOpenCodeUsage } from "@/lib/opencode";
 
 describe("parseCursorUsage", () => {
   it("parses plan usage, plan info, and grok sand status", () => {
@@ -117,6 +118,17 @@ describe("parseClaudeUsage", () => {
       rateLimitTier: "tier_4",
       orgUuid: "org-123",
     });
+  });
+
+  it("parses the three OpenCode usage windows", () => {
+    const usage = {
+      rolling: { status: "ok", percent: 12, resetsAt: "2026-10-15T01:00:00.000Z" },
+      weekly: { status: "ok", percent: 40, resetsAt: "2026-10-18T00:00:00.000Z" },
+      monthly: { status: "ok", percent: 70, resetsAt: "2026-11-01T00:00:00.000Z" },
+    };
+    expect(parseOpenCodeUsage({ usage })).toEqual(usage);
+    expect(parseOpenCodeUsage({ usage: { rolling: usage.rolling } })).toBeNull();
+    expect(parseOpenCodeUsage(null)).toBeNull();
   });
 
   it("returns unsigned and unsubscribed defaults when files are empty", () => {

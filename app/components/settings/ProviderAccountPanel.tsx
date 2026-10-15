@@ -2,6 +2,7 @@
 
 import IconButton, { GearIcon } from "@/app/components/ui/IconButton";
 import { SETTINGS_TYPE_SCALE } from "@/lib/theme";
+import { providerLabels, providerStatus } from "./account-labels";
 import type { SubProvider } from "./types";
 
 export function providerBadgeStyle(variant: "blue" | "emerald" | "zinc"): string {
@@ -27,36 +28,36 @@ export default function ProviderAccountPanel({
   badgeVariant: "blue" | "emerald" | "zinc";
   onOpenDetail: (p: SubProvider) => void;
 }) {
+  const labels = providerLabels(title, account, nickname);
+  const status = providerStatus(account, badgeText);
+  const statusStyle = providerBadgeStyle(status === "Inactive" ? "zinc" : badgeVariant);
+
   return (
-    <div className="space-y-2">
-      <div className="bg-role-surface border border-role-border rounded-lg px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className={`flex-1 min-w-0 ${SETTINGS_TYPE_SCALE.body} text-role-text truncate`}>
-            {account ?? "account unavailable"}
-          </span>
-          <IconButton
-            onClick={() => onOpenDetail(provider)}
-            title={`${title} details`}
-            aria-label={`${title} details`}
-            className="p-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg"
-          >
-            <GearIcon />
-          </IconButton>
-        </div>
-        <div className="mt-1 flex items-center gap-2">
-          <span className={`flex-1 min-w-0 ${SETTINGS_TYPE_SCALE.caption} text-role-muted truncate`}>
-            {nickname ?? "no nickname"}
-          </span>
-          {badgeText && (
-            <span
-              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${providerBadgeStyle(
-                badgeVariant,
-              )}`}
-            >
-              {badgeText}
-            </span>
+    <div className="rounded-lg border border-role-border bg-role-surface px-3 py-2">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className={`truncate ${SETTINGS_TYPE_SCALE.body} text-role-text`}>{labels.title}</div>
+          {labels.subtitle && (
+            <div className={`truncate ${SETTINGS_TYPE_SCALE.caption} text-role-muted`}>
+              {labels.subtitle}
+            </div>
           )}
         </div>
+        {status && (
+          <span
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${statusStyle}`}
+          >
+            {status}
+          </span>
+        )}
+        <IconButton
+          onClick={() => onOpenDetail(provider)}
+          title={`${title} details`}
+          aria-label={`${title} details`}
+          className="inline-flex h-6 w-6 items-center justify-center rounded text-role-muted hover:bg-role-bg hover:text-role-text"
+        >
+          <GearIcon />
+        </IconButton>
       </div>
     </div>
   );

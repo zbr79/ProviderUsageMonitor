@@ -1,5 +1,6 @@
 "use client";
 
+import ProviderIcon from "@/app/components/ui/ProviderIcon";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
 import { ResetTicker } from "./CountdownText";
@@ -28,7 +29,7 @@ export default function CodexCard({
   return (
     <CardShell state={exhausted ? "exhausted" : "default"} light={light}>
       <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
-        <img src="/openai.png" alt="codex" className={`h-3 w-3 shrink-0 ${light ? "invert" : ""}`} />
+        <ProviderIcon src="/openai.png" alt="codex" className={`h-3 w-3 shrink-0 ${light ? "invert" : ""}`} />
         <span className={`${WIDGET_TYPE_SCALE.title} truncate flex-1 font-medium text-role-text`}>
           {showProviderNames ? "Codex" : displayNames["codex"] ?? "Codex"}
         </span>

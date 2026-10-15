@@ -1,9 +1,10 @@
-const { app, BrowserWindow, Menu, ipcMain, screen, desktopCapturer, shell } = require("electron");
-const { spawn } = require("child_process");
+const { app, BrowserWindow, Menu, ipcMain, screen, shell } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { createRestartPolicy, appendRotatedLog } = require("./restart-policy");
+const { appendRotatedLog } = require("./restart-policy");
+const { createServerManager } = require("./server-manager");
+const { startBgSampler } = require("./bg-sampler");
 
 const APP_ROOT = path.resolve(__dirname, "..");
 const WIDGET_URL = "http://127.0.0.1:3100/widget";
@@ -12,22 +13,24 @@ const CONFIG_PATH = path.join(app.getPath("userData"), "widget-config.json");
 const LOG_DIR = path.join(app.getPath("userData"), "logs");
 const LOG_PATH = path.join(LOG_DIR, "main.log");
 const SECRET_PATH = path.join(APP_ROOT, "data", ".api-secret");
+const SETTINGS_FILE = path.join(APP_ROOT, "data", "settings.json");
 
 let win = null;
 let settingsWin = null;
 let dragOffset = null;
-let serverChild = null;
-let spawnedServer = false;
-let quitting = false;
-let restartTimer = null;
 let usageSecret = "";
-
-const restartPolicy = createRestartPolicy();
 
 function writeLog(level, message) {
   const line = `${new Date().toISOString()} [${level}] ${message}`;
   appendRotatedLog(LOG_PATH, line);
 }
+
+const server = createServerManager({
+  appRoot: APP_ROOT,
+  widgetUrl: WIDGET_URL,
+  log: writeLog,
+  getWindow: () => win,
+});
 
 process.on("uncaughtException", (err) => {
   writeLog("ERROR", `uncaughtException: ${err?.stack || err}`);
@@ -86,151 +89,37 @@ function ensureSecret() {
   }
 }
 
-async function serverIsUp() {
-  try {
-    const res = await fetch(WIDGET_URL, {
-      signal: AbortSignal.timeout(2000),
-    });
-    return res.ok;
-  } catch {
-    // Expected while server is still starting up
-    return false;
-  }
-}
-
-function pipeStreamToLog(stream, label) {
-  if (!stream) return;
-  stream.on("data", (chunk) => {
-    const text = String(chunk).trim();
-    if (!text) return;
-    for (const line of text.split(/\r?\n/)) {
-      writeLog(label, line);
-    }
+function showStartupError(message) {
+  writeLog("ERROR", message);
+  const errorWin = new BrowserWindow({
+    width: 460,
+    height: 240,
+    title: "Provider Usage Monitor",
+    alwaysOnTop: true,
+    skipTaskbar: false,
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
-}
-
-function scheduleServerRestart(reason) {
-  if (quitting || restartTimer) return;
-  const decision = restartPolicy.recordExit();
-  if (!decision.shouldRestart) {
-    writeLog(
-      "ERROR",
-      `Server exited (${reason}); ${decision.crashesInWindow} crashes in 5m, giving up automatic restart`,
-    );
-    if (win && !win.isDestroyed()) {
-      win.webContents.send("widget-server-status", {
-        state: "stopped",
-        crashes: decision.crashesInWindow,
-      });
-    }
-    return;
-  }
-  writeLog(
-    "WARN",
-    `Server exited (${reason}); restarting in ${decision.delayMs}ms (attempt ${decision.crashesInWindow})`,
-  );
-  if (win && !win.isDestroyed()) {
-    win.webContents.send("widget-server-status", {
-      state: "restarting",
-      delayMs: decision.delayMs,
-      attempt: decision.crashesInWindow,
-    });
-  }
-  restartTimer = setTimeout(async () => {
-    restartTimer = null;
-    if (quitting) return;
-    if (!(await serverIsUp())) {
-      startServer();
-    }
-    const ok = await waitForServer(30000);
-    if (ok) {
-      restartPolicy.reset();
-      writeLog("INFO", "Server recovered after restart");
-      if (win && !win.isDestroyed()) {
-        win.webContents.send("widget-server-status", { state: "online" });
-        win.loadURL(WIDGET_URL);
-      }
-    }
-  }, decision.delayMs);
-}
-
-function startServer() {
-  writeLog("INFO", "Spawning local Next.js server on 127.0.0.1:3100");
-  const isWin = process.platform === "win32";
-  const child = isWin
-    ? spawn("cmd.exe", ["/c", "npm run start"], {
-        cwd: APP_ROOT,
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-      })
-    : spawn("npm", ["run", "start"], {
-        cwd: APP_ROOT,
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
-      });
-  serverChild = child;
-  spawnedServer = true;
-
-  pipeStreamToLog(child.stdout, "SERVER");
-  pipeStreamToLog(child.stderr, "SERVER_ERR");
-
-  child.on("error", (err) => {
-    writeLog("ERROR", `Failed to spawn server process: ${err?.message || err}`);
-  });
-
-  child.on("exit", (code, signal) => {
-    if (serverChild === child) {
-      serverChild = null;
-      spawnedServer = false;
-    }
-    if (quitting) return;
-    scheduleServerRestart(`code=${code ?? "null"} signal=${signal ?? "null"}`);
-  });
-}
-
-function stopServer() {
-  quitting = true;
-  if (restartTimer) {
-    clearTimeout(restartTimer);
-    restartTimer = null;
-  }
-  if (!spawnedServer || !serverChild) return;
-  const pid = serverChild.pid;
-  serverChild = null;
-  spawnedServer = false;
-  if (!pid) return;
-  try {
-    if (process.platform === "win32") {
-      spawn("taskkill", ["/pid", String(pid), "/f", "/t"], {
-        windowsHide: true,
-        stdio: "ignore",
-      });
-    } else {
-      process.kill(-pid, "SIGTERM");
-    }
-  } catch (err) {
-    writeLog("WARN", `Failed to stop server process ${pid}: ${err?.message || err}`);
-  }
-}
-
-async function waitForServer(timeoutMs = 60000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await serverIsUp()) return true;
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  return false;
+  const safe = String(message)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Provider Usage Monitor</title></head><body style="margin:0;font-family:Segoe UI,sans-serif;background:#18181b;color:#f4f4f5"><main style="padding:24px"><h1 style="font-size:16px;margin:0 0 12px">The widget did not open</h1><p style="font-size:13px;line-height:1.5;margin:0">${safe}</p></main></body></html>`;
+  errorWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
 }
 
 async function recoverWindow(reason) {
-  if (quitting || !win || win.isDestroyed()) return;
+  if (server.isQuitting() || !win || win.isDestroyed()) return;
   writeLog("WARN", `Recovering widget window after ${reason}`);
-  if (!(await serverIsUp())) {
-    if (!serverChild && !restartTimer) {
-      scheduleServerRestart(reason);
+  if (!(await server.isUp())) {
+    if (!server.hasChild() && !server.hasRestartTimer()) {
+      server.scheduleRestart(reason);
       return;
     }
-    const ok = await waitForServer(20000);
+    const ok = await server.waitFor(20000);
     if (!ok) return;
   }
   if (win && !win.isDestroyed()) {
@@ -249,7 +138,7 @@ function createWindow() {
     transparent: true,
     resizable: true,
     alwaysOnTop: true,
-    skipTaskbar: true,
+    skipTaskbar: false,
     hasShadow: false,
     backgroundColor: "#00000000",
     icon: path.join(APP_ROOT, "app-icon.ico"),
@@ -314,7 +203,7 @@ function openSettingsOverlay() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    skipTaskbar: true,
+    skipTaskbar: false,
     hasShadow: false,
     backgroundColor: "#00000000",
     webPreferences: {
@@ -405,71 +294,37 @@ ipcMain.on("widget-resize", (_e, width, height) => {
   win.setSize(Math.round(width), h);
 });
 
-function startBgSampler() {
-  const SETTINGS_FILE = path.join(APP_ROOT, "data", "settings.json");
-  async function loop() {
-    while (!quitting) {
-      let mode = "auto";
-      try {
-        const s = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8"));
-        if (s?.themeMode === "light" || s?.themeMode === "dark" || s?.themeMode === "white") {
-          mode = s.themeMode;
-        }
-      } catch {
-        // Expected when settings.json has not been saved yet; default to auto
-      }
-      if (mode === "auto") {
-        try {
-          if (win && !win.isDestroyed() && !win.isMinimized() && win.isVisible()) {
-            const display = screen.getPrimaryDisplay();
-            const sources = await desktopCapturer.getSources({
-              types: ["screen"],
-              thumbnailSize: { width: 160, height: 90 },
-            });
-            const src = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
-            if (src) {
-              const buffer = src.thumbnail.toBitmap();
-              let sum = 0;
-              let count = 0;
-              for (let i = 0; i + 3 < buffer.length; i += 12) {
-                sum += buffer[i] + buffer[i + 1] + buffer[i + 2];
-                count += 3;
-              }
-              const avg = count ? sum / count / 255 : 0.5;
-              win.webContents.send("widget-bg", avg);
-            }
-          }
-        } catch (err) {
-          writeLog("WARN", `Screen brightness sample failed: ${err?.message || err}`);
-        }
-        await new Promise((r) => setTimeout(r, 3000));
-      } else {
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-    }
-  }
-  loop();
-}
-
 app.whenReady().then(async () => {
   writeLog("INFO", "Widget starting up");
   ensureSecret();
-  if (!(await serverIsUp())) {
-    startServer();
+  const probe = await server.probe();
+  if (probe === "other") {
+    showStartupError(
+      "Port 3100 is already used by another program. Close that program, then open Provider Usage Monitor again.",
+    );
+    return;
   }
-  const ok = await waitForServer();
+  if (probe === "down") {
+    server.start();
+  }
+  const ok = await server.waitFor();
   if (!usageSecret) ensureSecret();
   if (ok) {
-    restartPolicy.reset();
+    server.resetPolicy();
     writeLog("INFO", "Server is ready; creating widget window");
     createWindow();
-    startBgSampler();
+    startBgSampler({
+      settingsFile: SETTINGS_FILE,
+      log: writeLog,
+      getWindow: () => win,
+      shouldStop: () => server.isQuitting(),
+    });
   } else {
-    writeLog("ERROR", "Server did not start within 60s timeout");
-    console.error("Server did not start in time");
-    app.quit();
+    showStartupError(
+      "The local server did not answer on 127.0.0.1:3100 within 60 seconds. The log is in %APPDATA%\\provider-usage-widget\\logs\\main.log.",
+    );
   }
 });
 
-app.on("before-quit", () => stopServer());
+app.on("before-quit", () => server.stop());
 app.on("window-all-closed", () => app.quit());

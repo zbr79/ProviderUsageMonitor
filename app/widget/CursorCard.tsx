@@ -1,5 +1,6 @@
 "use client";
 
+import ProviderIcon from "@/app/components/ui/ProviderIcon";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
 import { ResetTicker } from "./CountdownText";
@@ -29,7 +30,7 @@ export default function CursorCard({
     return (
       <CardShell state="default" light={light}>
         <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
-          <img src="/cursor.ico" alt="cursor" className="h-3 w-3 shrink-0 rounded-[3px]" />
+          <ProviderIcon src="/cursor.ico" alt="cursor" className="h-3 w-3 shrink-0 rounded-[3px]" />
           <span className={`${WIDGET_TYPE_SCALE.title} truncate flex-1 font-medium text-role-text`}>
             crsr
           </span>
@@ -45,7 +46,7 @@ export default function CursorCard({
   return (
     <CardShell state={exhausted ? "exhausted" : "default"} light={light}>
       <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
-        <img src="/cursor.ico" alt="cursor" className="h-3 w-3 shrink-0 rounded-[3px]" />
+        <ProviderIcon src="/cursor.ico" alt="cursor" className="h-3 w-3 shrink-0 rounded-[3px]" />
         <span
           className={`${WIDGET_TYPE_SCALE.title} truncate flex-1 font-medium text-role-text`}
           title={cursor.accountName ?? ""}

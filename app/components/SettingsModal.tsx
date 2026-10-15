@@ -2,15 +2,16 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import AccountsTab from "@/app/components/settings/AccountsTab";
+import AddAccountForm from "@/app/components/settings/AddAccountForm";
 import GeneralTab from "@/app/components/settings/GeneralTab";
 import OpenCodeDetailDialog from "@/app/components/settings/OpenCodeDetailDialog";
 import ProviderDetailDialog from "@/app/components/settings/ProviderDetailDialog";
 import UpdateKeyDialog from "@/app/components/settings/UpdateKeyDialog";
 import type { MainTab, SubProvider } from "@/app/components/settings/types";
 import { useSettingsState } from "@/app/components/settings/useSettingsState";
-import { useDialogFocusTrap } from "@/app/components/ui/Dialog";
+import Dialog, { useDialogFocusTrap } from "@/app/components/ui/Dialog";
 import IconButton, { CloseIcon } from "@/app/components/ui/IconButton";
-import Tabs, { type TabItem } from "@/app/components/ui/Tabs";
+import Tabs, { tabDomId, tabPanelDomId, type TabItem } from "@/app/components/ui/Tabs";
 import { SETTINGS_THEMES, SETTINGS_TYPE_SCALE, themeStyleVars } from "@/lib/theme";
 
 const MAIN_TABS: TabItem<MainTab>[] = [
@@ -37,7 +38,17 @@ export default function SettingsModal({
     const move = (ev: MouseEvent) => {
       const d = dragState.current;
       if (!d) return;
-      setDragPos({ x: d.ox + ev.clientX - d.sx, y: d.oy + ev.clientY - d.sy });
+      const width = modalRef.current?.offsetWidth ?? 576;
+      const height = modalRef.current?.offsetHeight ?? 420;
+      const margin = 24;
+      const maxX = Math.max(0, (window.innerWidth - width) / 2 - margin);
+      const maxY = Math.max(0, (window.innerHeight - height) / 2 - margin);
+      const x = d.ox + ev.clientX - d.sx;
+      const y = d.oy + ev.clientY - d.sy;
+      setDragPos({
+        x: Math.min(maxX, Math.max(-maxX, x)),
+        y: Math.min(maxY, Math.max(-maxY, y)),
+      });
     };
     const up = () => {
       dragState.current = null;
@@ -48,21 +59,22 @@ export default function SettingsModal({
     window.addEventListener("mouseup", up);
   };
 
-  const { editKey, setEditKey, subDetail, setSubDetail, detailEmail, setDetailEmail } = s;
-  const hasChildDialog = Boolean(editKey || subDetail || detailEmail);
+  const { editKey, setEditKey, subDetail, setSubDetail, detailEmail, setDetailEmail, showAdd, setShowAdd } = s;
+  const hasChildDialog = Boolean(editKey || subDetail || detailEmail || showAdd);
   useDialogFocusTrap(modalRef, !hasChildDialog);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (editKey) setEditKey(false);
+      else if (showAdd) setShowAdd(false);
       else if (subDetail) setSubDetail(null);
       else if (detailEmail) setDetailEmail(null);
       else onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [editKey, setEditKey, subDetail, setSubDetail, detailEmail, setDetailEmail, onClose]);
+  }, [editKey, setEditKey, showAdd, setShowAdd, subDetail, setSubDetail, detailEmail, setDetailEmail, onClose]);
 
   const subDetailConfig = (p: SubProvider) => {
     if (p === "cursor") {
@@ -153,7 +165,7 @@ export default function SettingsModal({
         aria-modal="true"
         aria-labelledby="settings-modal-title"
         tabIndex={-1}
-        className="bg-role-bg rounded-xl shadow-2xl w-[576px] h-[608px] flex flex-col border border-role-border overflow-hidden"
+        className="bg-role-bg rounded-xl shadow-2xl w-[576px] min-h-[420px] max-h-[min(640px,calc(100vh-2rem))] flex flex-col border border-role-border overflow-hidden"
         style={{ transform: `translate(${dragPos.x}px, ${dragPos.y}px)` }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -182,9 +194,16 @@ export default function SettingsModal({
           active={mainTab}
           onSelect={setMainTab}
           ariaLabel="Settings sections"
+          idPrefix="settings-main"
           boldActive
         />
 
+        <div
+          role="tabpanel"
+          id={tabPanelDomId("settings-main", mainTab)}
+          aria-labelledby={tabDomId("settings-main", mainTab)}
+          className="flex flex-1 flex-col min-h-0"
+        >
         {mainTab === "system" ? (
           <GeneralTab
             panelTheme={s.panelTheme}
@@ -230,20 +249,34 @@ export default function SettingsModal({
             codexPlan={s.codexPlan}
             claudeAccount={s.claudeAccount}
             claudeStatus={s.claudeStatus}
-            showAdd={s.showAdd}
-            newEmail={s.newEmail}
-            newKey={s.newKey}
-            busy={s.busy}
             confirmRemove={s.confirmRemove}
-            onToggleAdd={() => s.setShowAdd(!s.showAdd)}
-            onChangeEmail={s.setNewEmail}
-            onChangeKey={s.setNewKey}
-            onSubmitAdd={s.addAccount}
+            now={s.usageAsOf}
+            onAdd={() => s.setShowAdd(true)}
             onOpenDetail={s.openDetail}
             onConfirmRemove={s.setConfirmRemove}
             onRemoveAccount={s.removeAccount}
             onOpenSubDetail={s.setSubDetail}
           />
+        )}
+        </div>
+        {s.showAdd && (
+          <Dialog
+            onClose={() => s.setShowAdd(false)}
+            ariaLabel="Add account"
+            widthClass="w-[320px]"
+            paddingClass="p-4"
+            zIndexClass="z-20"
+          >
+            <AddAccountForm
+              email={s.newEmail}
+              apiKey={s.newKey}
+              busy={s.busy}
+              onChangeEmail={s.setNewEmail}
+              onChangeKey={s.setNewKey}
+              onCancel={() => s.setShowAdd(false)}
+              onSubmit={s.addAccount}
+            />
+          </Dialog>
         )}
       </div>
 

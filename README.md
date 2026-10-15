@@ -14,7 +14,15 @@ Keys and logins stay on this machine. OpenCode uses an API key you add in settin
 
 The panel stays compact until you expand it. Disabled accounts are hidden. An account that has used up its weekly or monthly allowance drops to the bottom, soonest reset first. Otherwise the account that changed most recently stays on top.
 
-Right-click the window to expand, refresh, open settings, or quit. Settings can turn providers on or off, rename accounts, show or hide the DeepSeek peak-hour warning, and add or remove OpenCode accounts.
+Right-click the window, or press Shift+F10, to expand, refresh, open settings, or quit. Settings can turn providers on or off, rename accounts, show or hide the DeepSeek peak-hour warning, and add or remove OpenCode accounts.
+
+Keyboard shortcuts on the widget:
+
+- `E` expands or collapses the panel
+- `R` refreshes usage
+- `Ctrl+,` opens settings
+- `Ctrl+Q` quits
+- `Shift+F10` opens the menu
 
 ## How it runs
 
@@ -35,15 +43,16 @@ npm run build
 npm run start
 ```
 
-The site is at http://127.0.0.1:3100. From `desktop/`, `npm start` opens the widget.
+The site is at http://127.0.0.1:3100. From `desktop/`, `npm start` opens the widget. If port 3100 is already taken by another program, the window stays open and says so instead of exiting. A desktop shortcut can point at `desktop/widget-launcher.vbs`.
 
 ## Local data
 
 Nothing under `data/` is committed except the example file.
 
-- `data/accounts.json` stores OpenCode emails and API keys. See `data/accounts.example.json` for the shape.
+- `data/accounts.json` stores OpenCode emails and API keys. Keys are encrypted with AES-256-GCM. The key comes from `data/.api-secret`. An older plaintext file is encrypted the next time it is read. See `data/accounts.example.json` for the shape before encryption.
 - `data/settings.json` stores toggles, names, and disabled accounts.
-- `data/.api-secret` is a local token for account and settings writes. The desktop app sends it for you.
+- `data/.api-secret` is a local token for account and settings writes, and for encrypting stored API keys. The desktop app sends it for you.
+- Crash logs: the Electron window writes `%APPDATA%\provider-usage-widget\logs\main.log`. The server writes `data/logs/server.log`. The widget menu has **Open log folder**.
 
 ## Scripts
 
@@ -54,7 +63,7 @@ Nothing under `data/` is committed except the example file.
 - `npm run lint` runs ESLint
 - `npm run typecheck` checks TypeScript
 
-The tests cover ranking, reset text, settings defaults, the local write token, and account validation. They do not call provider APIs.
+The tests cover ranking, reset text, settings defaults, the local write token, encrypted account keys, provider response parsers, and account validation. They do not call provider APIs.
 
 ## Layout
 

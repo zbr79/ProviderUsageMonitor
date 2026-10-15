@@ -1,5 +1,6 @@
 "use client";
 
+import ProviderIcon from "@/app/components/ui/ProviderIcon";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
 import UsageBar from "./UsageBar";
@@ -39,7 +40,7 @@ export default function ClaudeCard({
   return (
     <CardShell state="default" light={light}>
       <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
-        <img src="/claude.ico" alt="claude" className="h-3 w-3 shrink-0 rounded-[3px]" />
+        <ProviderIcon src="/claude.ico" alt="claude" className="h-3 w-3 shrink-0 rounded-[3px]" />
         <span className={`${WIDGET_TYPE_SCALE.title} truncate flex-1 font-medium text-role-text`}>
           {showProviderNames ? "Claude" : displayNames["claude"] ?? "Claude"}
         </span>

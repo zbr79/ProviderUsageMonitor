@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
 import { toIsoTimestamp } from '@/lib/time'
@@ -122,18 +121,8 @@ async function getToken(): Promise<string | null> {
       tokenCache = { at: Date.now(), token: row.value }
       return row.value
     }
-  } catch {
-    // fall through to raw scan
-  }
-  try {
-    const raw = await fs.readFile(STATE_DB, 'utf8')
-    const m = raw.match(/cursorAuth\/accessToken[^"]*"([A-Za-z0-9._-]{40,})"/)
-    if (m?.[1]) {
-      tokenCache = { at: Date.now(), token: m[1] }
-      return m[1]
-    }
-  } catch {
-    // no cursor install / locked db
+  } catch (err) {
+    logWarn('cursor', 'Could not read the Cursor auth token from state.vscdb', err)
   }
   return null
 }

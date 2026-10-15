@@ -1,11 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import AddAccountForm from "./AddAccountForm";
 import GeneralTab from "./GeneralTab";
 import OpenCodeAccountsPanel from "./OpenCodeAccountsPanel";
 import OpenCodeDetailDialog from "./OpenCodeDetailDialog";
 import ProviderAccountPanel from "./ProviderAccountPanel";
 import ProviderDetailDialog from "./ProviderDetailDialog";
 import UpdateKeyDialog from "./UpdateKeyDialog";
+import Dialog from "@/app/components/ui/Dialog";
 import Tabs from "@/app/components/ui/Tabs";
 
 function assertAccessibleButtonsAndInputs(html: string) {
@@ -51,6 +53,8 @@ describe("Settings accessibility markup", () => {
     );
     expect(html).toContain('role="tablist"');
     expect(html).toContain('role="tab"');
+    expect(html).toContain('aria-controls="tab-panel-accounts"');
+    expect(html).toContain('id="tab-accounts"');
     expect(html).toContain('aria-selected="true"');
     expect(html).toContain('tabindex="0"');
     expect(html).toContain('tabindex="-1"');
@@ -76,31 +80,84 @@ describe("Settings accessibility markup", () => {
     assertAccessibleButtonsAndInputs(html);
   });
 
-  it("renders OpenCodeAccountsPanel with labeled inputs and named icon buttons", () => {
+  it("renders the account list without an inline add form", () => {
+    const now = Date.parse("2026-10-15T00:00:00.000Z");
     const html = renderToStaticMarkup(
       <OpenCodeAccountsPanel
-        accounts={[{ email: "work-main@opencode.ai" }]}
+        accounts={[
+          {
+            email: "work-main@opencode.ai",
+            weekly: { resetsAt: "2026-10-18T00:00:00.000Z", percent: 20, exhausted: false },
+            monthly: { resetsAt: "2026-11-02T00:00:00.000Z", percent: 30, exhausted: false },
+          },
+        ]}
         disabledAccounts={[]}
         displayNames={{ "work-main@opencode.ai": "work-main" }}
-        showAdd={true}
-        newEmail=""
-        newKey=""
-        busy={false}
-        confirmRemove={null}
-        onToggleAdd={() => {}}
-        onChangeEmail={() => {}}
-        onChangeKey={() => {}}
-        onSubmitAdd={() => {}}
+        confirmRemove="work-main@opencode.ai"
+        now={now}
+        onAdd={() => {}}
         onOpenDetail={() => {}}
         onConfirmRemove={() => {}}
         onRemoveAccount={() => {}}
       />,
     );
-    expect(html).toContain("Email or label");
-    expect(html).toContain("API key");
-    expect(html).toContain('aria-label="Account details for work-main@opencode.ai"');
-    expect(html).toContain('aria-label="Remove account work-main@opencode.ai"');
+    expect(html).not.toContain("Email or label");
+    expect(html).not.toContain("API key");
+    expect(html).toContain("Add account");
+    expect(html).toContain("work-main");
+    expect(html).toContain("work-main@opencode.ai");
+    expect(html).toContain("Week 3d");
+    expect(html).toContain("Month 18d");
+    expect(html).not.toContain("no nickname");
+    expect(html).toContain("Remove");
+
+    const statusHtml = renderToStaticMarkup(
+      <OpenCodeAccountsPanel
+        accounts={[
+          {
+            email: "main@example.com",
+            weekly: { resetsAt: "2026-10-18T00:00:00.000Z", percent: 10, exhausted: false },
+            monthly: { resetsAt: "2026-11-02T00:00:00.000Z", percent: 10, exhausted: false },
+          },
+          { email: "old@example.com", inactive: true, cached: true, weekly: null, monthly: null },
+          { email: "gone@example.com", inactive: true },
+        ]}
+        disabledAccounts={["old@example.com"]}
+        displayNames={{ "main@example.com": "Main" }}
+        confirmRemove={null}
+        now={now}
+        onAdd={() => {}}
+        onOpenDetail={() => {}}
+        onConfirmRemove={() => {}}
+        onRemoveAccount={() => {}}
+      />,
+    );
+    expect(statusHtml).toContain('aria-label="Account details for main@example.com"');
+    expect(statusHtml).toContain("Main");
+    expect(statusHtml).toContain("Hidden · Cached");
+    expect(statusHtml).toContain("Inactive");
+    expect(statusHtml).not.toContain("<form");
     assertAccessibleButtonsAndInputs(html);
+
+    const formHtml = renderToStaticMarkup(
+      <Dialog onClose={() => {}} ariaLabel="Add account" widthClass="w-[320px]" paddingClass="p-4">
+        <AddAccountForm
+          email=""
+          apiKey=""
+          busy={false}
+          onChangeEmail={() => {}}
+          onChangeKey={() => {}}
+          onCancel={() => {}}
+          onSubmit={() => {}}
+        />
+      </Dialog>,
+    );
+    expect(formHtml).toContain('role="dialog"');
+    expect(formHtml).toContain("w-[320px]");
+    expect(formHtml).toContain("Email or label");
+    expect(formHtml).toContain("API key");
+    expect(formHtml).not.toContain("min-h-[420px]");
+    assertAccessibleButtonsAndInputs(formHtml);
   });
 
   it("renders ProviderAccountPanel and all 3 detail/update dialogs with role=dialog and labeled controls", () => {
@@ -115,6 +172,9 @@ describe("Settings accessibility markup", () => {
         onOpenDetail={() => {}}
       />,
     );
+    expect(panelHtml).toContain("crsr-pro");
+    expect(panelHtml).toContain("dev@cursor.com");
+    expect(panelHtml).toContain("Pro");
     assertAccessibleButtonsAndInputs(panelHtml);
 
     const openCodeDialogHtml = renderToStaticMarkup(

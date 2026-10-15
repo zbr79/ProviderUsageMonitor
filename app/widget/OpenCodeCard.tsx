@@ -1,5 +1,6 @@
 "use client";
 
+import ProviderIcon from "@/app/components/ui/ProviderIcon";
 import { isExhausted, isExhaustedWindow } from "@/lib/ranking";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
@@ -49,7 +50,7 @@ export default function OpenCodeCard({
           className="shrink-0 h-6 w-6 -m-1 rounded-[3px] flex items-center justify-center hover:bg-role-surface transition-colors"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <img src="/opencode.ico" alt="" className="h-3 w-3 rounded-[3px]" />
+          <ProviderIcon src="/opencode.ico" className="h-3 w-3 rounded-[3px]" />
         </button>
         <span className={`${WIDGET_TYPE_SCALE.title} truncate font-medium text-role-text`}>
           {labelText}
