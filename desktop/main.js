@@ -156,11 +156,18 @@ function scheduleServerRestart(reason) {
 
 function startServer() {
   writeLog("INFO", "Spawning local Next.js server on 127.0.0.1:3100");
-  const child = spawn("cmd.exe", ["/c", "npm run start"], {
-    cwd: APP_ROOT,
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
+  const isWin = process.platform === "win32";
+  const child = isWin
+    ? spawn("cmd.exe", ["/c", "npm run start"], {
+        cwd: APP_ROOT,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      })
+    : spawn("npm", ["run", "start"], {
+        cwd: APP_ROOT,
+        stdio: ["ignore", "pipe", "pipe"],
+        detached: true,
+      });
   serverChild = child;
   spawnedServer = true;
 
@@ -193,10 +200,14 @@ function stopServer() {
   spawnedServer = false;
   if (!pid) return;
   try {
-    spawn("taskkill", ["/pid", String(pid), "/f", "/t"], {
-      windowsHide: true,
-      stdio: "ignore",
-    });
+    if (process.platform === "win32") {
+      spawn("taskkill", ["/pid", String(pid), "/f", "/t"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+    } else {
+      process.kill(-pid, "SIGTERM");
+    }
   } catch (err) {
     writeLog("WARN", `Failed to stop server process ${pid}: ${err?.message || err}`);
   }

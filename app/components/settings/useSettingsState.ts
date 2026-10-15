@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
 import { apiFetch } from "@/lib/api-fetch";
+import type { Settings } from "@/lib/settings";
 import type { AccountRow, ProviderTab, SubProvider } from "./types";
 
 export function useSettingsState(onChanged: () => void) {
@@ -39,8 +40,12 @@ export function useSettingsState(onChanged: () => void) {
 
   const refresh = useCallback(async () => {
     const [u, s] = await Promise.all([
-      apiFetch("/api/accounts", { cache: "no-store" }).then((r) => r.json()),
-      apiFetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+      apiFetch("/api/accounts", { cache: "no-store" })
+        .then((r): Promise<{ accounts?: AccountRow[] }> => (r.ok ? r.json() : Promise.resolve({})))
+        .catch((): { accounts?: AccountRow[] } => ({})),
+      apiFetch("/api/settings", { cache: "no-store" })
+        .then((r): Promise<{ settings?: Partial<Settings> }> => (r.ok ? r.json() : Promise.resolve({})))
+        .catch((): { settings?: Partial<Settings> } => ({})),
     ]);
     const disabled = s.settings?.disabledAccounts ?? [];
     const list = (u.accounts ?? []).map((a: AccountRow) => ({ email: a.email }));
