@@ -2,6 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
 import { toIsoTimestamp } from '@/lib/time'
+import { logWarn } from '@/lib/log'
 
 const STATE_DB = path.join(
   process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'),
@@ -125,6 +126,7 @@ export async function getCursorUsage(): Promise<CursorUsage | null> {
       signal: AbortSignal.timeout(10_000),
     })
     if (!res.ok) {
+      logWarn('cursor', `GetCurrentPeriodUsage returned HTTP ${res.status}`)
       usageCache = { at: Date.now(), data: null }
       return null
     }
@@ -170,7 +172,8 @@ export async function getCursorUsage(): Promise<CursorUsage | null> {
     }
     usageCache = { at: Date.now(), data }
     return data
-  } catch {
+  } catch (err) {
+    logWarn('cursor', 'Failed to fetch Cursor usage', err)
     usageCache = { at: Date.now(), data: null }
     return null
   }

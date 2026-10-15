@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
+import { logWarn } from '@/lib/log'
 
 const AUTH_FILE = path.join(os.homedir(), '.codex', 'auth.json')
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
@@ -34,6 +35,7 @@ async function readAuth(): Promise<CodexAuth | null> {
   try {
     return JSON.parse(await fs.readFile(AUTH_FILE, 'utf8'))
   } catch {
+    // Expected when Codex CLI is not installed or signed in
     return null
   }
 }
@@ -68,7 +70,8 @@ async function refreshTokens(auth: CodexAuth): Promise<CodexAuth | null> {
     }
     await fs.writeFile(AUTH_FILE, JSON.stringify(next, null, 2), 'utf8')
     return next
-  } catch {
+  } catch (err) {
+    logWarn('codex', 'Failed to refresh Codex OAuth token', err)
     return null
   }
 }
@@ -105,6 +108,7 @@ export async function getCodexUsage(): Promise<CodexUsage | null> {
       res = await fetchUsage(refreshed.tokens.access_token, refreshed.tokens.account_id)
     }
     if (!res.ok) {
+      logWarn('codex', `Usage endpoint returned HTTP ${res.status}`)
       usageCache = { at: Date.now(), data: null }
       return null
     }
@@ -129,7 +133,8 @@ export async function getCodexUsage(): Promise<CodexUsage | null> {
     }
     usageCache = { at: Date.now(), data }
     return data
-  } catch {
+  } catch (err) {
+    logWarn('codex', 'Failed to fetch Codex usage', err)
     usageCache = { at: Date.now(), data: null }
     return null
   }

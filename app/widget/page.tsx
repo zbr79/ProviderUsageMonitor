@@ -142,6 +142,8 @@ export default function Widget() {
   const [themeMode, setThemeMode] = useState<"auto" | "light" | "dark" | "white">("auto");
   const [changedAt, setChangedAt] = useState<Map<string, number>>(() => new Map());
   const [increaseAt, setIncreaseAt] = useState<Map<string, number>>(() => new Map());
+  const [failedPolls, setFailedPolls] = useState(0);
+  const [serverState, setServerState] = useState<"online" | "restarting" | "stopped">("online");
 
   useEffect(() => {
     const off = usageWidget()?.onBg?.((v: number) => {
@@ -161,6 +163,13 @@ export default function Widget() {
 
   useEffect(() => {
     const off = usageWidget()?.onToggleExpand?.(() => setExpanded((e) => !e));
+    return () => off?.();
+  }, []);
+
+  useEffect(() => {
+    const off = usageWidget()?.onServerStatus?.((s) => {
+      if (s?.state) setServerState(s.state);
+    });
     return () => off?.();
   }, []);
 
@@ -212,6 +221,7 @@ export default function Widget() {
   const load = useCallback(async () => {
     try {
       const settingsRes = await apiFetch("/api/settings", { cache: "no-store" });
+      if (!settingsRes.ok) throw new Error(`settings HTTP ${settingsRes.status}`);
       const sjson = await settingsRes.json();
       const nextCursorEnabled = sjson.settings?.cursorEnabled !== false;
       const nextGrokEnabled = sjson.settings?.grokEnabled !== false;
@@ -232,6 +242,7 @@ export default function Widget() {
         apiFetch("/api/codex", { cache: "no-store" }),
         apiFetch("/api/claude", { cache: "no-store" }),
       ]);
+      if (!usageRes.ok) throw new Error(`usage HTTP ${usageRes.status}`);
       const json = await usageRes.json();
       {
         const cjson = await cursorRes.json();
@@ -275,8 +286,10 @@ export default function Widget() {
         return next;
       });
       setRows(accounts);
+      setFailedPolls(0);
+      setServerState("online");
     } catch {
-      // widget stays silent on transient errors
+      setFailedPolls((n) => n + 1);
     }
   }, []);
 
@@ -700,6 +713,11 @@ export default function Widget() {
   };
 
   const peakInfo = getPeakInfo(new Date(now));
+  const showOffline = failedPolls >= 2 || serverState !== "online";
+  const offlineLabel =
+    serverState === "stopped"
+      ? "Server stopped · right-click to refresh"
+      : "Offline · retrying";
 
   return (
     <div className="w-screen p-1.5 select-none">
@@ -710,6 +728,19 @@ export default function Widget() {
             : ""
         }
       >
+          {showOffline && (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`rounded-lg px-2 py-1 text-[10px] font-medium mb-1.5 ${
+                light
+                  ? "bg-amber-100 text-amber-900 border border-amber-300"
+                  : "bg-amber-500/15 text-amber-200 border border-amber-400/30"
+              }`}
+            >
+              {offlineLabel}
+            </div>
+          )}
           {rows === null ? (
             <div className={`text-[11px] px-1 py-2 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
               Loading…

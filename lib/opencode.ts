@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { dataDir } from '@/lib/data-dir'
+import { logWarn } from '@/lib/log'
 
 export interface Account {
   email: string
@@ -31,6 +32,7 @@ export async function getAccounts(): Promise<Account[]> {
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed : []
   } catch {
+    // Expected when accounts.json has not been created yet
     return []
   }
 }
@@ -91,10 +93,13 @@ export async function getUsage(
         }
         lastSeen.set(email, data)
       }
+    } else {
+      logWarn('opencode', `Usage request for ${email} returned HTTP ${res.status}`)
     }
     usageCache.set(email, { at: Date.now(), data })
     return { usage: data, prev }
-  } catch {
+  } catch (err) {
+    logWarn('opencode', `Usage request failed for ${email}`, err)
     usageCache.set(email, { at: Date.now(), data: null })
     return { usage: null, prev: lastSeen.get(email) ?? null }
   }

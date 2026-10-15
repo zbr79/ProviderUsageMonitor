@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
+import { logWarn } from '@/lib/log'
 
 const CLAUDE_JSON = path.join(os.homedir(), '.claude.json')
 const CREDENTIALS = path.join(os.homedir(), '.claude', '.credentials.json')
@@ -26,6 +27,7 @@ export async function getClaudeUsage(): Promise<ClaudeUsage | null> {
       const main = JSON.parse(await fs.readFile(CLAUDE_JSON, 'utf8'))
       oauth = main?.oauthAccount ?? null
     } catch {
+      // Expected when Claude Code is not installed
       oauth = null
     }
     let subType: string | null = null
@@ -37,6 +39,7 @@ export async function getClaudeUsage(): Promise<ClaudeUsage | null> {
       tier = creds?.claudeAiOauth?.rateLimitTier ?? null
       signedIn = !!creds?.claudeAiOauth?.accessToken
     } catch {
+      // Expected when Claude credentials file is absent
       signedIn = false
     }
     const billingType = typeof oauth?.billingType === 'string' ? oauth.billingType : null
@@ -54,7 +57,8 @@ export async function getClaudeUsage(): Promise<ClaudeUsage | null> {
     }
     cache = { at: Date.now(), data }
     return data
-  } catch {
+  } catch (err) {
+    logWarn('claude', 'Failed to read Claude usage', err)
     cache = { at: Date.now(), data: null }
     return null
   }

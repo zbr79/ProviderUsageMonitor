@@ -1,13 +1,16 @@
-const { app, BrowserWindow, Menu, ipcMain, screen, desktopCapturer } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, screen, desktopCapturer, shell } = require("electron");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { createRestartPolicy, appendRotatedLog } = require("./restart-policy");
 
 const APP_ROOT = path.resolve(__dirname, "..");
 const WIDGET_URL = "http://127.0.0.1:3100/widget";
 const WIDTH = 238;
 const CONFIG_PATH = path.join(app.getPath("userData"), "widget-config.json");
+const LOG_DIR = path.join(app.getPath("userData"), "logs");
+const LOG_PATH = path.join(LOG_DIR, "main.log");
 const SECRET_PATH = path.join(APP_ROOT, "data", ".api-secret");
 
 let win = null;
@@ -15,7 +18,24 @@ let settingsWin = null;
 let dragOffset = null;
 let serverChild = null;
 let spawnedServer = false;
+let quitting = false;
+let restartTimer = null;
 let usageSecret = "";
+
+const restartPolicy = createRestartPolicy();
+
+function writeLog(level, message) {
+  const line = `${new Date().toISOString()} [${level}] ${message}`;
+  appendRotatedLog(LOG_PATH, line);
+}
+
+process.on("uncaughtException", (err) => {
+  writeLog("ERROR", `uncaughtException: ${err?.stack || err}`);
+});
+
+process.on("unhandledRejection", (reason) => {
+  writeLog("ERROR", `unhandledRejection: ${reason?.stack || reason}`);
+});
 
 function loadPos() {
   try {
@@ -32,6 +52,7 @@ function loadPos() {
     });
     return visible ? { x: c.x, y: c.y } : null;
   } catch {
+    // Expected when widget-config.json has not been created yet
     return null;
   }
 }
@@ -42,8 +63,8 @@ function savePos() {
   try {
     fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
     fs.writeFileSync(CONFIG_PATH, JSON.stringify({ x: b.x, y: b.y, width: b.width, height: b.height }));
-  } catch {
-    // ignore
+  } catch (err) {
+    writeLog("WARN", `Failed to save window position: ${err?.message || err}`);
   }
 }
 
@@ -59,32 +80,113 @@ function ensureSecret() {
     }
     usageSecret = crypto.randomBytes(32).toString("hex");
     fs.writeFileSync(SECRET_PATH, usageSecret, { encoding: "utf8", mode: 0o600 });
-  } catch {
+  } catch (err) {
+    writeLog("WARN", `Failed to persist API secret, using in-memory fallback: ${err?.message || err}`);
     usageSecret = crypto.randomBytes(32).toString("hex");
   }
 }
 
 async function serverIsUp() {
   try {
-    const res = await fetch("http://127.0.0.1:3100/widget", {
+    const res = await fetch(WIDGET_URL, {
       signal: AbortSignal.timeout(2000),
     });
     return res.ok;
   } catch {
+    // Expected while server is still starting up
     return false;
   }
 }
 
+function pipeStreamToLog(stream, label) {
+  if (!stream) return;
+  stream.on("data", (chunk) => {
+    const text = String(chunk).trim();
+    if (!text) return;
+    for (const line of text.split(/\r?\n/)) {
+      writeLog(label, line);
+    }
+  });
+}
+
+function scheduleServerRestart(reason) {
+  if (quitting || restartTimer) return;
+  const decision = restartPolicy.recordExit();
+  if (!decision.shouldRestart) {
+    writeLog(
+      "ERROR",
+      `Server exited (${reason}); ${decision.crashesInWindow} crashes in 5m, giving up automatic restart`,
+    );
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("widget-server-status", {
+        state: "stopped",
+        crashes: decision.crashesInWindow,
+      });
+    }
+    return;
+  }
+  writeLog(
+    "WARN",
+    `Server exited (${reason}); restarting in ${decision.delayMs}ms (attempt ${decision.crashesInWindow})`,
+  );
+  if (win && !win.isDestroyed()) {
+    win.webContents.send("widget-server-status", {
+      state: "restarting",
+      delayMs: decision.delayMs,
+      attempt: decision.crashesInWindow,
+    });
+  }
+  restartTimer = setTimeout(async () => {
+    restartTimer = null;
+    if (quitting) return;
+    if (!(await serverIsUp())) {
+      startServer();
+    }
+    const ok = await waitForServer(30000);
+    if (ok) {
+      restartPolicy.reset();
+      writeLog("INFO", "Server recovered after restart");
+      if (win && !win.isDestroyed()) {
+        win.webContents.send("widget-server-status", { state: "online" });
+        win.loadURL(WIDGET_URL);
+      }
+    }
+  }, decision.delayMs);
+}
+
 function startServer() {
-  serverChild = spawn("cmd.exe", ["/c", "npm run start"], {
+  writeLog("INFO", "Spawning local Next.js server on 127.0.0.1:3100");
+  const child = spawn("cmd.exe", ["/c", "npm run start"], {
     cwd: APP_ROOT,
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
+  serverChild = child;
   spawnedServer = true;
+
+  pipeStreamToLog(child.stdout, "SERVER");
+  pipeStreamToLog(child.stderr, "SERVER_ERR");
+
+  child.on("error", (err) => {
+    writeLog("ERROR", `Failed to spawn server process: ${err?.message || err}`);
+  });
+
+  child.on("exit", (code, signal) => {
+    if (serverChild === child) {
+      serverChild = null;
+      spawnedServer = false;
+    }
+    if (quitting) return;
+    scheduleServerRestart(`code=${code ?? "null"} signal=${signal ?? "null"}`);
+  });
 }
 
 function stopServer() {
+  quitting = true;
+  if (restartTimer) {
+    clearTimeout(restartTimer);
+    restartTimer = null;
+  }
   if (!spawnedServer || !serverChild) return;
   const pid = serverChild.pid;
   serverChild = null;
@@ -95,8 +197,8 @@ function stopServer() {
       windowsHide: true,
       stdio: "ignore",
     });
-  } catch {
-    // ignore
+  } catch (err) {
+    writeLog("WARN", `Failed to stop server process ${pid}: ${err?.message || err}`);
   }
 }
 
@@ -107,6 +209,22 @@ async function waitForServer(timeoutMs = 60000) {
     await new Promise((r) => setTimeout(r, 1000));
   }
   return false;
+}
+
+async function recoverWindow(reason) {
+  if (quitting || !win || win.isDestroyed()) return;
+  writeLog("WARN", `Recovering widget window after ${reason}`);
+  if (!(await serverIsUp())) {
+    if (!serverChild && !restartTimer) {
+      scheduleServerRestart(reason);
+      return;
+    }
+    const ok = await waitForServer(20000);
+    if (!ok) return;
+  }
+  if (win && !win.isDestroyed()) {
+    win.loadURL(WIDGET_URL);
+  }
 }
 
 function createWindow() {
@@ -149,6 +267,22 @@ function createWindow() {
     showMenu();
   });
 
+  win.webContents.on("render-process-gone", (_e, details) => {
+    writeLog("ERROR", `Renderer process gone: reason=${details?.reason} exitCode=${details?.exitCode}`);
+    setTimeout(() => recoverWindow(`render-process-gone (${details?.reason})`), 1000);
+  });
+
+  win.webContents.on("did-fail-load", (_e, errorCode, errorDescription, validatedURL) => {
+    if (errorCode === -3) return; // ERR_ABORTED during reload
+    writeLog("WARN", `did-fail-load: code=${errorCode} (${errorDescription}) url=${validatedURL}`);
+    setTimeout(() => recoverWindow(`did-fail-load (${errorCode})`), 1500);
+  });
+
+  win.on("unresponsive", () => {
+    writeLog("WARN", "Widget window became unresponsive");
+    setTimeout(() => recoverWindow("window-unresponsive"), 2000);
+  });
+
   win.on("closed", () => {
     win = null;
   });
@@ -186,6 +320,15 @@ function openSettingsOverlay() {
   });
 }
 
+function openLogFolder() {
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    shell.openPath(LOG_DIR);
+  } catch (err) {
+    writeLog("WARN", `Failed to open log folder: ${err?.message || err}`);
+  }
+}
+
 function showMenu() {
   if (!win) return;
   Menu.buildFromTemplate([
@@ -193,10 +336,14 @@ function showMenu() {
       label: "Toggle Expand / Collapse",
       click: () => win.webContents.send("widget-toggle-expand"),
     },
-    { label: "Refresh", click: () => win.reload() },
+    { label: "Refresh", click: () => recoverWindow("manual-refresh") },
     {
       label: "Settings",
       click: () => openSettingsOverlay(),
+    },
+    {
+      label: "Open log folder",
+      click: () => openLogFolder(),
     },
     { type: "separator" },
     { label: "Quit", click: () => app.quit() },
@@ -214,6 +361,7 @@ ipcMain.on("widget-close", () => app.quit());
 ipcMain.on("widget-minimize", () => {
   if (win) win.minimize();
 });
+ipcMain.on("widget-open-settings", () => openSettingsOverlay());
 ipcMain.on("widget-show-menu", () => showMenu());
 ipcMain.on("widget-drag-start", (_e, sx, sy) => {
   if (!win) return;
@@ -239,13 +387,15 @@ ipcMain.on("widget-resize", (_e, width, height) => {
 function startBgSampler() {
   const SETTINGS_FILE = path.join(APP_ROOT, "data", "settings.json");
   async function loop() {
-    while (true) {
+    while (!quitting) {
       let mode = "auto";
       try {
         const s = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8"));
-        if (s?.themeMode === "light" || s?.themeMode === "dark") mode = s.themeMode;
+        if (s?.themeMode === "light" || s?.themeMode === "dark" || s?.themeMode === "white") {
+          mode = s.themeMode;
+        }
       } catch {
-        // no settings file yet → auto
+        // Expected when settings.json has not been saved yet; default to auto
       }
       if (mode === "auto") {
         try {
@@ -268,8 +418,8 @@ function startBgSampler() {
               win.webContents.send("widget-bg", avg);
             }
           }
-        } catch {
-          // ignore sampling errors
+        } catch (err) {
+          writeLog("WARN", `Screen brightness sample failed: ${err?.message || err}`);
         }
         await new Promise((r) => setTimeout(r, 3000));
       } else {
@@ -281,6 +431,7 @@ function startBgSampler() {
 }
 
 app.whenReady().then(async () => {
+  writeLog("INFO", "Widget starting up");
   ensureSecret();
   if (!(await serverIsUp())) {
     startServer();
@@ -288,9 +439,12 @@ app.whenReady().then(async () => {
   const ok = await waitForServer();
   if (!usageSecret) ensureSecret();
   if (ok) {
+    restartPolicy.reset();
+    writeLog("INFO", "Server is ready; creating widget window");
     createWindow();
     startBgSampler();
   } else {
+    writeLog("ERROR", "Server did not start within 60s timeout");
     console.error("Server did not start in time");
     app.quit();
   }

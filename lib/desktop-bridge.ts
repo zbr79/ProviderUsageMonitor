@@ -1,8 +1,19 @@
+export interface ServerStatusPayload {
+  state: 'online' | 'restarting' | 'stopped'
+  delayMs?: number
+  attempt?: number
+  crashes?: number
+}
+
 export interface UsageWidgetBridge {
   secret?: string
+  close?: () => void
+  minimize?: () => void
+  openSettings?: () => void
   onBg?: (cb: (value: number) => void) => () => void
   onToggleExpand?: (cb: () => void) => () => void
   onSettingsChanged?: (cb: () => void) => () => void
+  onServerStatus?: (cb: (status: ServerStatusPayload) => void) => () => void
   showMenu?: () => void
   startDrag?: (screenX: number, screenY: number) => void
   moveDrag?: (screenX: number, screenY: number) => void
