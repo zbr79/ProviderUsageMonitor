@@ -19,7 +19,7 @@ export default function Checkbox({
       aria-pressed={checked}
       onClick={() => onChange(!checked)}
       className={`h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors ${
-        checked ? "bg-emerald-500 border-emerald-400" : "bg-zinc-800 border-zinc-600"
+        checked ? "bg-emerald-600 border-emerald-500" : "bg-role-surface border-role-field"
       }`}
     >
       {checked && (

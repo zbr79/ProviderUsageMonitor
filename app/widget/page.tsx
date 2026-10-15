@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
 import { apiFetch } from "@/lib/api-fetch";
 import { usageWidget } from "@/lib/desktop-bridge";
 import { getPeakInfo } from "@/lib/ranking";
+import {
+  resolveWidgetThemeName,
+  themeStyleVars,
+  WIDGET_THEMES,
+  WIDGET_TYPE_SCALE,
+} from "@/lib/theme";
 import ClaudeCard from "./ClaudeCard";
 import CodexCard from "./CodexCard";
 import CursorCard from "./CursorCard";
@@ -83,14 +89,9 @@ export default function Widget() {
     window.addEventListener("mouseup", up);
   };
 
-  const light =
-    themeMode === "light" || themeMode === "white"
-      ? true
-      : themeMode === "dark"
-        ? false
-        : bgBright !== null && bgBright < 0.5;
-  const cardBg =
-    themeMode === "white" ? "bg-white" : light ? "bg-zinc-200" : "bg-zinc-900";
+  const widgetThemeName = resolveWidgetThemeName(themeMode, bgBright);
+  const light = widgetThemeName !== "dark";
+  const themeVars = themeStyleVars(WIDGET_THEMES[widgetThemeName]) as CSSProperties;
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -138,7 +139,6 @@ export default function Widget() {
       isInUse={row.enabled !== false && sortedRows?.[0]?.email === row.email}
       withControls={withControls}
       light={light}
-      cardBg={cardBg}
       showProviderNames={showProviderNames}
       displayNames={displayNames}
       deepseekPeakHourWarning={deepseekPeakHourWarning}
@@ -157,7 +157,6 @@ export default function Widget() {
         cursorError={cursorError}
         cursorEnabled={cursorEnabled}
         light={light}
-        cardBg={cardBg}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
         now={now}
@@ -167,7 +166,6 @@ export default function Widget() {
         cursor={cursor}
         grokEnabled={grokEnabled}
         light={light}
-        cardBg={cardBg}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
         now={now}
@@ -177,7 +175,6 @@ export default function Widget() {
         codex={codex}
         codexEnabled={codexEnabled}
         light={light}
-        cardBg={cardBg}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
         now={now}
@@ -187,7 +184,6 @@ export default function Widget() {
         claude={claude}
         claudeEnabled={claudeEnabled}
         light={light}
-        cardBg={cardBg}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
         onDragStart={onDragStart}
@@ -196,23 +192,19 @@ export default function Widget() {
   );
 
   return (
-    <div className="w-screen p-1.5 select-none">
+    <div className="w-screen p-1.5 select-none" style={themeVars}>
       <div className={expanded ? "space-y-1.5" : ""}>
         {showOffline && (
           <div
             role="status"
             aria-live="polite"
-            className={`rounded-lg px-2 py-1 text-[10px] font-medium mb-1.5 ${
-              light
-                ? "bg-amber-100 text-amber-900 border border-amber-300"
-                : "bg-amber-500/15 text-amber-200 border border-amber-400/30"
-            }`}
+            className={`rounded-lg px-2 py-1 ${WIDGET_TYPE_SCALE.body} font-medium mb-1.5 bg-role-surface text-role-text border border-role-border`}
           >
             {offlineLabel}
           </div>
         )}
         {rows === null ? (
-          <div className={`text-[11px] px-1 py-2 ${light ? "text-zinc-500" : "text-zinc-400"}`}>
+          <div className={`${WIDGET_TYPE_SCALE.title} px-1 py-2 text-role-muted`}>
             Loading…
           </div>
         ) : expanded ? (

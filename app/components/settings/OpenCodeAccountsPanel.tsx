@@ -3,6 +3,7 @@
 import Button from "@/app/components/ui/Button";
 import Field from "@/app/components/ui/Field";
 import IconButton, { GearIcon, TrashIcon } from "@/app/components/ui/IconButton";
+import { SETTINGS_TYPE_SCALE } from "@/lib/theme";
 import type { AccountRow } from "./types";
 
 export default function OpenCodeAccountsPanel({
@@ -41,11 +42,11 @@ export default function OpenCodeAccountsPanel({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-zinc-300">Accounts</span>
+        <span className={`${SETTINGS_TYPE_SCALE.body} font-medium text-role-text`}>Accounts</span>
         <Button
           variant={showAdd ? "secondary" : "primary"}
           onClick={onToggleAdd}
-          className="px-3 py-1.5 text-sm"
+          className={`px-3 py-1.5 ${SETTINGS_TYPE_SCALE.body}`}
         >
           {showAdd ? "Cancel" : "Add"}
         </Button>
@@ -67,28 +68,28 @@ export default function OpenCodeAccountsPanel({
             mono
             className="rounded-lg px-3 py-1"
           />
-          <Button type="submit" disabled={busy} className="px-4 py-2 text-sm">
+          <Button type="submit" disabled={busy} className={`px-4 py-2 ${SETTINGS_TYPE_SCALE.body}`}>
             {busy ? "Adding…" : "Add account"}
           </Button>
         </form>
       )}
       <div className="space-y-2">
         {accounts === null ? (
-          <div className="text-sm text-zinc-500">Loading…</div>
+          <div className={`${SETTINGS_TYPE_SCALE.body} text-role-muted`}>Loading…</div>
         ) : accounts.length === 0 ? (
-          <div className="text-sm text-zinc-500">No accounts yet.</div>
+          <div className={`${SETTINGS_TYPE_SCALE.body} text-role-muted`}>No accounts yet.</div>
         ) : (
           accounts.map((a) => (
             <div
               key={a.email}
-              className={`bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 ${
+              className={`bg-role-surface border border-role-border rounded-lg px-3 py-2 ${
                 disabledAccounts.includes(a.email.toLowerCase()) ? "opacity-45" : ""
               }`}
             >
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onOpenDetail(a.email)}
-                  className="flex-1 min-w-0 text-left text-sm text-zinc-200 truncate"
+                  className={`flex-1 min-w-0 text-left ${SETTINGS_TYPE_SCALE.body} text-role-text truncate`}
                 >
                   {a.email}
                 </button>
@@ -96,7 +97,7 @@ export default function OpenCodeAccountsPanel({
                   <IconButton
                     onClick={() => onOpenDetail(a.email)}
                     title="Account details"
-                    className="p-1 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700"
+                    className="p-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg"
                   >
                     <GearIcon />
                   </IconButton>
@@ -113,7 +114,7 @@ export default function OpenCodeAccountsPanel({
                       </button>
                       <button
                         onClick={() => onConfirmRemove(null)}
-                        className="text-[10px] px-2 py-1 rounded text-zinc-300 hover:bg-zinc-700 shrink-0"
+                        className="text-[10px] px-2 py-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg shrink-0"
                       >
                         Cancel
                       </button>
@@ -122,14 +123,14 @@ export default function OpenCodeAccountsPanel({
                     <IconButton
                       onClick={() => onConfirmRemove(a.email)}
                       title="Remove account"
-                      className="p-1 rounded text-zinc-400 hover:text-red-300 hover:bg-zinc-700"
+                      className="p-1 rounded text-role-muted hover:text-role-danger hover:bg-role-bg"
                     >
                       <TrashIcon />
                     </IconButton>
                   )}
                 </div>
               </div>
-              <div className="mt-1 text-xs text-zinc-500 truncate">
+              <div className={`mt-1 ${SETTINGS_TYPE_SCALE.caption} text-role-muted truncate`}>
                 {displayNames[a.email] ?? "no nickname"}
               </div>
             </div>

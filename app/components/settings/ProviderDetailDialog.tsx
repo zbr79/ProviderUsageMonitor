@@ -4,6 +4,7 @@ import Checkbox from "@/app/components/ui/Checkbox";
 import Dialog from "@/app/components/ui/Dialog";
 import Field from "@/app/components/ui/Field";
 import IconButton, { CloseIcon } from "@/app/components/ui/IconButton";
+import { SETTINGS_TYPE_SCALE } from "@/lib/theme";
 import { providerBadgeStyle } from "./ProviderAccountPanel";
 import type { SubProvider } from "./types";
 
@@ -42,7 +43,9 @@ export default function ProviderDetailDialog({
       <div className="flex items-center justify-between mb-4">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className="text-base font-bold text-zinc-100">{PROVIDER_TITLE[provider]}</h3>
+            <h3 className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>
+              {PROVIDER_TITLE[provider]}
+            </h3>
             {badgeText && (
               <span
                 className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${providerBadgeStyle(
@@ -54,26 +57,28 @@ export default function ProviderDetailDialog({
             )}
             <Checkbox checked={enabled} onChange={onToggleMonitoring} title="Monitoring" />
           </div>
-          <div className="text-xs text-zinc-500 truncate">{account ?? "account unavailable"}</div>
+          <div className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted truncate`}>
+            {account ?? "account unavailable"}
+          </div>
         </div>
         <IconButton
           onClick={onClose}
           title="Close"
-          className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+          className="p-1.5 rounded-md text-role-muted hover:text-role-text hover:bg-role-surface"
         >
           <CloseIcon />
         </IconButton>
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="text-xs text-zinc-400 shrink-0">Nickname</div>
+          <div className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted shrink-0`}>Nickname</div>
           <Field
             defaultValue={nickname}
             placeholder="nickname"
             onBlur={(e) => onSaveNickname(provider, e.target.value)}
             className="flex-1 min-w-0 rounded px-2 py-1"
           />
-          {savedFlash && <span className="text-[10px] text-emerald-400 shrink-0">✓ saved</span>}
+          {savedFlash && <span className="text-[10px] text-role-success shrink-0">✓ saved</span>}
         </div>
       </div>
     </Dialog>

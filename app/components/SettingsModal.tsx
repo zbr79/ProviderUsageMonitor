@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import AccountsTab from "@/app/components/settings/AccountsTab";
 import GeneralTab from "@/app/components/settings/GeneralTab";
 import OpenCodeDetailDialog from "@/app/components/settings/OpenCodeDetailDialog";
@@ -10,6 +10,7 @@ import type { MainTab, SubProvider } from "@/app/components/settings/types";
 import { useSettingsState } from "@/app/components/settings/useSettingsState";
 import IconButton, { CloseIcon } from "@/app/components/ui/IconButton";
 import Tabs, { type TabItem } from "@/app/components/ui/Tabs";
+import { SETTINGS_THEMES, SETTINGS_TYPE_SCALE, themeStyleVars } from "@/lib/theme";
 
 const MAIN_TABS: TabItem<MainTab>[] = [
   { id: "system", label: "General" },
@@ -132,17 +133,18 @@ export default function SettingsModal({
     };
   };
 
+  const themeVars = themeStyleVars(SETTINGS_THEMES[s.panelTheme]) as CSSProperties;
+
   return (
     <div
-      className={`fixed inset-0 bg-transparent flex items-center justify-center p-4 z-50 ${
-        s.panelTheme === "light" ? "settings-light" : ""
-      }`}
+      className="fixed inset-0 bg-transparent flex items-center justify-center p-4 z-50"
+      style={themeVars}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="bg-zinc-900 rounded-xl shadow-2xl w-[576px] h-[608px] flex flex-col border border-zinc-700 overflow-hidden"
+        className="bg-role-bg rounded-xl shadow-2xl w-[576px] h-[608px] flex flex-col border border-role-border overflow-hidden"
         style={{ transform: `translate(${dragPos.x}px, ${dragPos.y}px)` }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -150,11 +152,11 @@ export default function SettingsModal({
           className="flex items-center justify-between px-5 pt-5 pb-2 cursor-move select-none"
           onMouseDown={onHeaderMouseDown}
         >
-          <h2 className="text-lg font-bold text-zinc-100">Settings</h2>
+          <h2 className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>Settings</h2>
           <IconButton
             onClick={onClose}
             title="Close"
-            className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+            className="p-1.5 rounded-md text-role-muted hover:text-role-text hover:bg-role-surface"
           >
             <CloseIcon />
           </IconButton>
@@ -197,6 +199,7 @@ export default function SettingsModal({
           <AccountsTab
             tab={s.tab}
             onSelectTab={s.setTab}
+            panelTheme={s.panelTheme}
             accounts={s.accounts}
             disabledAccounts={s.disabledAccounts}
             displayNames={s.displayNames}

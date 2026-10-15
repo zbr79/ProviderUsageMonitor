@@ -12,12 +12,12 @@ export default function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
   const variantClass =
     variant === "primary"
-      ? "bg-zinc-200 text-zinc-800 hover:bg-zinc-300"
+      ? "bg-role-text text-role-bg hover:opacity-90"
       : variant === "secondary"
-        ? "bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+        ? "bg-role-surface text-role-text border border-role-border hover:opacity-90"
         : variant === "danger"
           ? "bg-red-600 hover:bg-red-500 text-white"
-          : "text-zinc-300 hover:bg-zinc-800";
+          : "text-role-muted hover:text-role-text hover:bg-role-surface";
 
   return (
     <button

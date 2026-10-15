@@ -1,6 +1,7 @@
 "use client";
 
 import type { InputHTMLAttributes } from "react";
+import { SETTINGS_TYPE_SCALE } from "@/lib/theme";
 
 export default function Field({
   className = "",
@@ -10,7 +11,7 @@ export default function Field({
   return (
     <input
       {...props}
-      className={`bg-zinc-800 border border-zinc-600 text-sm text-zinc-100 placeholder:text-zinc-500 ${
+      className={`bg-role-surface border border-role-field ${SETTINGS_TYPE_SCALE.body} text-role-text placeholder:text-role-muted ${
         mono ? "font-mono" : ""
       } ${className}`}
     />

@@ -23,7 +23,7 @@ export default function Dialog({
       }}
     >
       <div
-        className={`bg-zinc-900 rounded-xl shadow-2xl ${widthClass} border border-zinc-700 ${paddingClass}`}
+        className={`bg-role-bg rounded-xl shadow-2xl ${widthClass} border border-role-border ${paddingClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

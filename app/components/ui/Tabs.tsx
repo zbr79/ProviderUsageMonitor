@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { SETTINGS_TYPE_SCALE } from "@/lib/theme";
 
 export interface TabItem<T extends string> {
   id: T;
@@ -20,17 +21,17 @@ export default function Tabs<T extends string>({
   boldActive?: boolean;
 }) {
   return (
-    <div className="flex gap-5 px-5 border-b border-zinc-800 mb-3">
+    <div className="flex gap-5 px-5 border-b border-role-border mb-3">
       {items.map((item) => {
         const isSelected = active === item.id;
         return (
           <button
             key={item.id}
             onClick={() => onSelect(item.id)}
-            className={`${item.icon ? "flex items-center gap-1.5 " : ""}px-0.5 pb-2 pt-1 -mb-px text-sm border-b-2 transition-colors ${
+            className={`${item.icon ? "flex items-center gap-1.5 " : ""}px-0.5 pb-2 pt-1 -mb-px ${SETTINGS_TYPE_SCALE.body} border-b-2 transition-colors ${
               isSelected
-                ? `border-emerald-400 text-zinc-100${boldActive ? " font-medium" : ""}`
-                : "border-transparent text-zinc-500 hover:text-zinc-300"
+                ? `border-role-accent text-role-text${boldActive ? " font-medium" : ""}`
+                : "border-transparent text-role-muted hover:text-role-text"
             }`}
           >
             {item.icon}

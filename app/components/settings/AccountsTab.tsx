@@ -5,37 +5,10 @@ import OpenCodeAccountsPanel from "./OpenCodeAccountsPanel";
 import ProviderAccountPanel from "./ProviderAccountPanel";
 import type { AccountRow, ProviderTab, SubProvider } from "./types";
 
-const PROVIDER_TABS: TabItem<ProviderTab>[] = [
-  {
-    id: "opencode",
-    label: "OpenCode",
-    icon: <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
-  },
-  {
-    id: "cursor",
-    label: "Cursor",
-    icon: <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
-  },
-  {
-    id: "grok",
-    label: "Grok Bot",
-    icon: <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
-  },
-  {
-    id: "codex",
-    label: "Codex",
-    icon: <img src="/openai.png" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
-  },
-  {
-    id: "claude",
-    label: "Claude",
-    icon: <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
-  },
-];
-
 export default function AccountsTab({
   tab,
   onSelectTab,
+  panelTheme,
   accounts,
   disabledAccounts,
   displayNames,
@@ -61,6 +34,7 @@ export default function AccountsTab({
 }: {
   tab: ProviderTab;
   onSelectTab: (t: ProviderTab) => void;
+  panelTheme?: "light" | "dark";
   accounts: AccountRow[] | null;
   disabledAccounts: string[];
   displayNames: Record<string, string>;
@@ -84,9 +58,43 @@ export default function AccountsTab({
   onRemoveAccount: (email: string) => void;
   onOpenSubDetail: (p: SubProvider) => void;
 }) {
+  const providerTabs: TabItem<ProviderTab>[] = [
+    {
+      id: "opencode",
+      label: "OpenCode",
+      icon: <img src="/opencode.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+    },
+    {
+      id: "cursor",
+      label: "Cursor",
+      icon: <img src="/cursor.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+    },
+    {
+      id: "grok",
+      label: "Grok Bot",
+      icon: <img src="/grokbot.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+    },
+    {
+      id: "codex",
+      label: "Codex",
+      icon: (
+        <img
+          src="/openai.png"
+          alt=""
+          className={`h-3.5 w-3.5 rounded-[3px] ${panelTheme === "light" ? "invert" : ""}`}
+        />
+      ),
+    },
+    {
+      id: "claude",
+      label: "Claude",
+      icon: <img src="/claude.ico" alt="" className="h-3.5 w-3.5 rounded-[3px]" />,
+    },
+  ];
+
   return (
     <>
-      <Tabs items={PROVIDER_TABS} active={tab} onSelect={onSelectTab} />
+      <Tabs items={providerTabs} active={tab} onSelect={onSelectTab} />
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5">
         {tab === "opencode" ? (
           <OpenCodeAccountsPanel
