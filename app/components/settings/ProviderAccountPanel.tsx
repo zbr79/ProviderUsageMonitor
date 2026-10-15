@@ -37,6 +37,7 @@ export default function ProviderAccountPanel({
           <IconButton
             onClick={() => onOpenDetail(provider)}
             title={`${title} details`}
+            aria-label={`${title} details`}
             className="p-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg"
           >
             <GearIcon />

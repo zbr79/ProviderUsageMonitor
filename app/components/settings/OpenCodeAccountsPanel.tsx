@@ -54,6 +54,8 @@ export default function OpenCodeAccountsPanel({
       {showAdd && (
         <form onSubmit={onSubmitAdd} className="flex flex-col gap-2 mb-3">
           <Field
+            id="opencode-new-email"
+            label="Email or label"
             value={newEmail}
             onChange={(e) => onChangeEmail(e.target.value)}
             placeholder="email or label"
@@ -61,6 +63,8 @@ export default function OpenCodeAccountsPanel({
             className="rounded-lg px-3 py-1"
           />
           <Field
+            id="opencode-new-key"
+            label="API key"
             value={newKey}
             onChange={(e) => onChangeKey(e.target.value)}
             placeholder="sk-..."
@@ -88,6 +92,7 @@ export default function OpenCodeAccountsPanel({
             >
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => onOpenDetail(a.email)}
                   className={`flex-1 min-w-0 text-left ${SETTINGS_TYPE_SCALE.body} text-role-text truncate`}
                 >
@@ -97,6 +102,7 @@ export default function OpenCodeAccountsPanel({
                   <IconButton
                     onClick={() => onOpenDetail(a.email)}
                     title="Account details"
+                    aria-label={`Account details for ${a.email}`}
                     className="p-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg"
                   >
                     <GearIcon />
@@ -104,6 +110,7 @@ export default function OpenCodeAccountsPanel({
                   {confirmRemove === a.email ? (
                     <>
                       <button
+                        type="button"
                         onClick={() => {
                           onRemoveAccount(a.email);
                           onConfirmRemove(null);
@@ -113,6 +120,7 @@ export default function OpenCodeAccountsPanel({
                         Remove
                       </button>
                       <button
+                        type="button"
                         onClick={() => onConfirmRemove(null)}
                         className="text-[10px] px-2 py-1 rounded text-role-muted hover:text-role-text hover:bg-role-bg shrink-0"
                       >
@@ -123,6 +131,7 @@ export default function OpenCodeAccountsPanel({
                     <IconButton
                       onClick={() => onConfirmRemove(a.email)}
                       title="Remove account"
+                      aria-label={`Remove account ${a.email}`}
                       className="p-1 rounded text-role-muted hover:text-role-danger hover:bg-role-bg"
                     >
                       <TrashIcon />

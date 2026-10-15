@@ -20,13 +20,20 @@ export default function UpdateKeyDialog({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const titleId = "update-key-dialog-title";
+
   return (
-    <Dialog onClose={onCancel} zIndexClass="z-[60]">
-      <h3 className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text mb-4`}>
+    <Dialog onClose={onCancel} labelledBy={titleId} zIndexClass="z-[60]">
+      <h3
+        id={titleId}
+        className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text mb-4`}
+      >
         Update API key · {email}
       </h3>
       <div className="flex flex-col gap-3">
         <Field
+          id="update-key-input"
+          label="New API key"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="new sk-... key"

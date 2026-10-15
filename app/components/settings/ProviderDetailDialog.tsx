@@ -38,13 +38,17 @@ export default function ProviderDetailDialog({
   onToggleMonitoring: (next: boolean) => void;
   onSaveNickname: (key: string, name: string) => void;
 }) {
+  const title = PROVIDER_TITLE[provider];
+  const titleId = `provider-detail-title-${provider}`;
+  const nicknameId = `provider-detail-nickname-${provider}`;
+
   return (
-    <Dialog onClose={onClose} zIndexClass="z-[70]">
+    <Dialog onClose={onClose} labelledBy={titleId} zIndexClass="z-[70]">
       <div className="flex items-center justify-between mb-4">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>
-              {PROVIDER_TITLE[provider]}
+            <h3 id={titleId} className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>
+              {title}
             </h3>
             {badgeText && (
               <span
@@ -55,7 +59,12 @@ export default function ProviderDetailDialog({
                 {badgeText}
               </span>
             )}
-            <Checkbox checked={enabled} onChange={onToggleMonitoring} title="Monitoring" />
+            <Checkbox
+              checked={enabled}
+              onChange={onToggleMonitoring}
+              title="Monitoring"
+              ariaLabel={`Monitor ${title}`}
+            />
           </div>
           <div className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted truncate`}>
             {account ?? "account unavailable"}
@@ -64,6 +73,7 @@ export default function ProviderDetailDialog({
         <IconButton
           onClick={onClose}
           title="Close"
+          aria-label={`Close ${title} details`}
           className="p-1.5 rounded-md text-role-muted hover:text-role-text hover:bg-role-surface"
         >
           <CloseIcon />
@@ -71,8 +81,14 @@ export default function ProviderDetailDialog({
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted shrink-0`}>Nickname</div>
+          <label
+            htmlFor={nicknameId}
+            className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted shrink-0`}
+          >
+            Nickname
+          </label>
           <Field
+            id={nicknameId}
             defaultValue={nickname}
             placeholder="nickname"
             onBlur={(e) => onSaveNickname(provider, e.target.value)}

@@ -31,12 +31,17 @@ export default function OpenCodeDetailDialog({
   onSaveNickname: (key: string, name: string) => void;
   onStartEditKey: () => void;
 }) {
+  const titleId = "opencode-detail-dialog-title";
+  const nicknameId = "opencode-detail-nickname";
+
   return (
-    <Dialog onClose={onClose} zIndexClass="z-50">
+    <Dialog onClose={onClose} labelledBy={titleId} zIndexClass="z-50">
       <div className="flex items-center justify-between mb-4">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>OpenCode</h3>
+            <h3 id={titleId} className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>
+              OpenCode
+            </h3>
             <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full border role-badge-blue">
               Go
             </span>
@@ -44,6 +49,7 @@ export default function OpenCodeDetailDialog({
               checked={!disabled}
               onChange={() => onToggleAccount(email, disabled)}
               title={disabled ? "Enable account" : "Disable account"}
+              ariaLabel={`${disabled ? "Enable" : "Disable"} account ${email}`}
             />
           </div>
           <div className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted truncate`}>{email}</div>
@@ -51,6 +57,7 @@ export default function OpenCodeDetailDialog({
         <IconButton
           onClick={onClose}
           title="Close"
+          aria-label="Close OpenCode account details"
           className="p-1.5 rounded-md text-role-muted hover:text-role-text hover:bg-role-surface"
         >
           <CloseIcon />
@@ -58,8 +65,14 @@ export default function OpenCodeDetailDialog({
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted shrink-0`}>Nickname</div>
+          <label
+            htmlFor={nicknameId}
+            className={`${SETTINGS_TYPE_SCALE.caption} text-role-muted shrink-0`}
+          >
+            Nickname
+          </label>
           <Field
+            id={nicknameId}
             defaultValue={nickname}
             placeholder="nickname"
             onBlur={(e) => onSaveNickname(email, e.target.value)}
@@ -77,6 +90,7 @@ export default function OpenCodeDetailDialog({
           <IconButton
             onClick={onStartEditKey}
             title="Update API key"
+            aria-label={`Update API key for ${email}`}
             className="p-1 rounded text-role-muted hover:text-role-text hover:bg-role-surface"
           >
             <EditIcon />

@@ -94,7 +94,7 @@ export default function AccountsTab({
 
   return (
     <>
-      <Tabs items={providerTabs} active={tab} onSelect={onSelectTab} />
+      <Tabs items={providerTabs} active={tab} onSelect={onSelectTab} ariaLabel="Provider tabs" />
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 pb-5">
         {tab === "opencode" ? (
           <OpenCodeAccountsPanel

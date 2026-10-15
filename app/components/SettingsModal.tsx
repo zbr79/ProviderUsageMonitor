@@ -8,6 +8,7 @@ import ProviderDetailDialog from "@/app/components/settings/ProviderDetailDialog
 import UpdateKeyDialog from "@/app/components/settings/UpdateKeyDialog";
 import type { MainTab, SubProvider } from "@/app/components/settings/types";
 import { useSettingsState } from "@/app/components/settings/useSettingsState";
+import { useDialogFocusTrap } from "@/app/components/ui/Dialog";
 import IconButton, { CloseIcon } from "@/app/components/ui/IconButton";
 import Tabs, { type TabItem } from "@/app/components/ui/Tabs";
 import { SETTINGS_THEMES, SETTINGS_TYPE_SCALE, themeStyleVars } from "@/lib/theme";
@@ -28,6 +29,7 @@ export default function SettingsModal({
   const [mainTab, setMainTab] = useState<MainTab>("accounts");
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
   const dragState = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   const onHeaderMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button, input, select")) return;
@@ -47,6 +49,8 @@ export default function SettingsModal({
   };
 
   const { editKey, setEditKey, subDetail, setSubDetail, detailEmail, setDetailEmail } = s;
+  const hasChildDialog = Boolean(editKey || subDetail || detailEmail);
+  useDialogFocusTrap(modalRef, !hasChildDialog);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -144,6 +148,11 @@ export default function SettingsModal({
       }}
     >
       <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+        tabIndex={-1}
         className="bg-role-bg rounded-xl shadow-2xl w-[576px] h-[608px] flex flex-col border border-role-border overflow-hidden"
         style={{ transform: `translate(${dragPos.x}px, ${dragPos.y}px)` }}
         onClick={(e) => e.stopPropagation()}
@@ -152,17 +161,29 @@ export default function SettingsModal({
           className="flex items-center justify-between px-5 pt-5 pb-2 cursor-move select-none"
           onMouseDown={onHeaderMouseDown}
         >
-          <h2 className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}>Settings</h2>
+          <h2
+            id="settings-modal-title"
+            className={`${SETTINGS_TYPE_SCALE.heading} font-bold text-role-text`}
+          >
+            Settings
+          </h2>
           <IconButton
             onClick={onClose}
             title="Close"
+            aria-label="Close settings"
             className="p-1.5 rounded-md text-role-muted hover:text-role-text hover:bg-role-surface"
           >
             <CloseIcon />
           </IconButton>
         </div>
 
-        <Tabs items={MAIN_TABS} active={mainTab} onSelect={setMainTab} boldActive />
+        <Tabs
+          items={MAIN_TABS}
+          active={mainTab}
+          onSelect={setMainTab}
+          ariaLabel="Settings sections"
+          boldActive
+        />
 
         {mainTab === "system" ? (
           <GeneralTab

@@ -32,10 +32,16 @@ export default function GeneralTab({
             Appearance of this settings panel
           </div>
         </div>
-        <div className="flex rounded-lg overflow-hidden border border-role-border shrink-0">
+        <div
+          role="group"
+          aria-label="Panel theme"
+          className="flex rounded-lg overflow-hidden border border-role-border shrink-0"
+        >
           {(["light", "dark"] as const).map((t) => (
             <button
               key={t}
+              type="button"
+              aria-pressed={panelTheme === t}
               onClick={() => onSetPanel(t)}
               className={`px-2.5 py-1 ${SETTINGS_TYPE_SCALE.caption} capitalize transition-colors ${
                 panelTheme === t
@@ -56,10 +62,16 @@ export default function GeneralTab({
             Auto follows screen brightness (uses CPU); Light/Dark are static
           </div>
         </div>
-        <div className="flex rounded-lg overflow-hidden border border-role-border shrink-0">
+        <div
+          role="group"
+          aria-label="Widget theme"
+          className="flex rounded-lg overflow-hidden border border-role-border shrink-0"
+        >
           {(["auto", "light", "white", "dark"] as const).map((m) => (
             <button
               key={m}
+              type="button"
+              aria-pressed={themeMode === m}
               onClick={() => onSetTheme(m)}
               className={`px-2.5 py-1 ${SETTINGS_TYPE_SCALE.caption} capitalize transition-colors ${
                 themeMode === m
@@ -82,7 +94,11 @@ export default function GeneralTab({
             Display provider names on widget cards instead of nicknames
           </div>
         </div>
-        <Checkbox checked={showProviderNames} onChange={onToggleProviderNames} />
+        <Checkbox
+          checked={showProviderNames}
+          onChange={onToggleProviderNames}
+          ariaLabel="Show provider names"
+        />
       </div>
 
       <div className="flex items-center justify-between bg-role-surface border border-role-border rounded-lg px-3 py-3">
