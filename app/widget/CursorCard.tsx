@@ -54,6 +54,7 @@ export default function CursorCard({
         >
           {showProviderNames ? "Cursor" : displayNames["cursor"] ?? cursor.accountName ?? "Cursor"}
         </span>
+        {exhausted && <span className="sr-only">Used up</span>}
         {cursor.planName && (
           <span
             className={`ml-auto ${WIDGET_TYPE_SCALE.caption} font-semibold px-1.5 py-0.5 rounded-full border role-badge-blue`}
@@ -66,14 +67,14 @@ export default function CursorCard({
         <UsageBar
           label="First Party"
           w={{ status: "ok", percent: cursor.autoPercentUsed ?? 0, resetsAt: "" }}
-          dimmed={false}
+          dimmed={exhausted}
           increased={false}
           reset={null}
         />
         <UsageBar
           label="API"
           w={{ status: "ok", percent: cursor.apiPercentUsed ?? 0, resetsAt: "" }}
-          dimmed={false}
+          dimmed={exhausted}
           increased={false}
           reset={null}
         />

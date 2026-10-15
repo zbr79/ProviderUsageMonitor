@@ -39,6 +39,7 @@ export default function Widget() {
     increaseAt,
     failedPolls,
     serverState,
+    reload,
   } = useWidgetData();
 
   const [now, setNow] = useState(() => Date.now());
@@ -74,6 +75,40 @@ export default function Widget() {
     document.addEventListener("contextmenu", onCtx);
     return () => document.removeEventListener("contextmenu", onCtx);
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === ",") {
+        e.preventDefault();
+        usageWidget()?.openSettings?.();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "q") {
+        e.preventDefault();
+        usageWidget()?.close?.();
+        return;
+      }
+      if ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu") {
+        e.preventDefault();
+        usageWidget()?.showMenu?.();
+        return;
+      }
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key.toLowerCase() === "e") {
+          e.preventDefault();
+          setExpanded((v) => !v);
+        } else if (e.key.toLowerCase() === "r") {
+          e.preventDefault();
+          void reload();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [reload]);
 
   const onDragStart = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -192,7 +227,12 @@ export default function Widget() {
   );
 
   return (
-    <div className="w-screen p-1.5 select-none" style={themeVars}>
+    <div
+      role="region"
+      aria-label="Provider usage monitor"
+      className="w-screen p-1.5 select-none"
+      style={themeVars}
+    >
       <div className={expanded ? "space-y-1.5" : ""}>
         {showOffline && (
           <div

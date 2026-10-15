@@ -38,6 +38,9 @@ export default function OpenCodeCard({
   const disabled = row.enabled === false;
   const exhausted = isExhausted(row);
   const state = disabled ? "disabled" : exhausted ? "exhausted" : isInUse ? "inUse" : "default";
+  const labelText = showProviderNames
+    ? "OpenCode"
+    : displayNames[row.email] ?? row.email.slice(0, 4);
   const showInc = (win: string) => {
     const at = increaseAt.get(`${row.email}:${win}`);
     return !!at && now - at < 20_000;
@@ -47,16 +50,25 @@ export default function OpenCodeCard({
     <CardShell state={state} light={light}>
       <div className="flex items-center gap-1.5 mb-1.5 cursor-move" onMouseDown={onDragStart}>
         <button
+          type="button"
           onClick={() => onCopyKey(row.email)}
           title="Copy key"
-          className="shrink-0 rounded-[3px] p-0.5 hover:bg-role-surface transition-colors"
+          aria-label={`Copy API key for ${labelText}`}
+          className="shrink-0 h-6 w-6 -m-1 rounded-[3px] flex items-center justify-center hover:bg-role-surface transition-colors"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
-          <img src="/opencode.ico" alt="copy key" className="h-3 w-3 rounded-[3px]" />
+          <img src="/opencode.ico" alt="" className="h-3 w-3 rounded-[3px]" />
         </button>
         <span className={`${WIDGET_TYPE_SCALE.title} truncate font-medium text-role-text`}>
-          {showProviderNames ? "OpenCode" : displayNames[row.email] ?? row.email.slice(0, 4)}
+          {labelText}
         </span>
+        {exhausted ? (
+          <span className="sr-only">Used up</span>
+        ) : isInUse ? (
+          <span className="sr-only">In use</span>
+        ) : disabled ? (
+          <span className="sr-only">Disabled</span>
+        ) : null}
         {deepseekPeakHourWarning && withControls && peakInfo.active && peakInfo.endAt ? (
           <span className={`${WIDGET_TYPE_SCALE.caption} font-medium whitespace-nowrap text-role-danger`}>
             Peak Ends in {fmtDuration(peakInfo.endAt - now)}
@@ -80,6 +92,7 @@ export default function OpenCodeCard({
             label="R"
             w={row.usage.rolling}
             dimmed={
+              exhausted ||
               isExhaustedWindow(row.usage.weekly) ||
               isExhaustedWindow(row.usage.monthly)
             }
@@ -89,14 +102,14 @@ export default function OpenCodeCard({
           <UsageBar
             label="W"
             w={row.usage.weekly}
-            dimmed={isExhaustedWindow(row.usage.monthly)}
+            dimmed={exhausted || isExhaustedWindow(row.usage.monthly)}
             increased={showInc("weekly")}
             reset={withControls ? resetFmt(row.usage.weekly.resetsAt, now) : null}
           />
           <UsageBar
             label="M"
             w={row.usage.monthly}
-            dimmed={false}
+            dimmed={exhausted}
             increased={showInc("monthly")}
             reset={resetFmt(row.usage.monthly.resetsAt, now)}
           />

@@ -35,6 +35,7 @@ export default function GrokCard({
         <span className={`${WIDGET_TYPE_SCALE.title} truncate flex-1 font-medium text-role-text`}>
           {showProviderNames ? "Grok Bot" : displayNames["grok"] ?? "Grok Bot"}
         </span>
+        {exhausted && <span className="sr-only">Used up</span>}
         {cursor.planName && (
           <span
             className={`ml-auto ${WIDGET_TYPE_SCALE.caption} font-semibold px-1.5 py-0.5 rounded-full border role-badge-blue`}
@@ -47,7 +48,7 @@ export default function GrokCard({
         <UsageBar
           label="Usage"
           w={{ status: "ok", percent: pct, resetsAt: "" }}
-          dimmed={false}
+          dimmed={exhausted}
           increased={false}
           reset={null}
         />

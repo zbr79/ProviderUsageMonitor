@@ -334,11 +334,17 @@ function showMenu() {
   Menu.buildFromTemplate([
     {
       label: "Toggle Expand / Collapse",
+      accelerator: "E",
       click: () => win.webContents.send("widget-toggle-expand"),
     },
-    { label: "Refresh", click: () => recoverWindow("manual-refresh") },
+    {
+      label: "Refresh",
+      accelerator: "R",
+      click: () => recoverWindow("manual-refresh"),
+    },
     {
       label: "Settings",
+      accelerator: "CmdOrCtrl+,",
       click: () => openSettingsOverlay(),
     },
     {
@@ -346,7 +352,11 @@ function showMenu() {
       click: () => openLogFolder(),
     },
     { type: "separator" },
-    { label: "Quit", click: () => app.quit() },
+    {
+      label: "Quit",
+      accelerator: "CmdOrCtrl+Q",
+      click: () => app.quit(),
+    },
   ]).popup({ window: win });
 }
 

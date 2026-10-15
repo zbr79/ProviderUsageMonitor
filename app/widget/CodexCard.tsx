@@ -34,6 +34,7 @@ export default function CodexCard({
         <span className={`${WIDGET_TYPE_SCALE.title} truncate flex-1 font-medium text-role-text`}>
           {showProviderNames ? "Codex" : displayNames["codex"] ?? "Codex"}
         </span>
+        {exhausted && <span className="sr-only">Used up</span>}
         {codex?.planType && (
           <span
             className={`ml-auto ${WIDGET_TYPE_SCALE.caption} font-semibold px-1.5 py-0.5 rounded-full border ${
@@ -50,7 +51,7 @@ export default function CodexCard({
             <UsageBar
               label="Usage"
               w={{ status: "ok", percent: pct, resetsAt: "" }}
-              dimmed={false}
+              dimmed={exhausted}
               increased={false}
               reset={null}
             />
