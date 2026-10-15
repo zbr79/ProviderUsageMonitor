@@ -18,6 +18,28 @@ export interface CodexUsage {
   limitReached: boolean
 }
 
+export function parseCodexUsage(json: Record<string, unknown> | null | undefined): CodexUsage {
+  const rl = (json?.rate_limit ?? null) as Record<string, unknown> | null
+  const primary = (rl?.primary_window ?? null) as Record<string, unknown> | null
+  const credits = (json?.credits ?? null) as Record<string, unknown> | null
+  return {
+    email: typeof json?.email === 'string' ? json.email : null,
+    planType: typeof json?.plan_type === 'string' ? json.plan_type : null,
+    usedPercent: typeof primary?.used_percent === 'number' ? primary.used_percent : null,
+    limitWindowSeconds:
+      typeof primary?.limit_window_seconds === 'number' ? primary.limit_window_seconds : null,
+    resetAt:
+      typeof primary?.reset_at === 'number'
+        ? new Date(primary.reset_at * 1000).toISOString()
+        : null,
+    creditsBalance:
+      credits?.balance != null && !Number.isNaN(Number(credits.balance))
+        ? Number(credits.balance)
+        : null,
+    limitReached: rl?.limit_reached === true,
+  }
+}
+
 let usageCache: { at: number; data: CodexUsage | null } | null = null
 
 interface CodexAuth {
@@ -113,24 +135,7 @@ export async function getCodexUsage(): Promise<CodexUsage | null> {
       return null
     }
     const json = await res.json()
-    const rl = json?.rate_limit
-    const primary = rl?.primary_window
-    const data: CodexUsage = {
-      email: typeof json?.email === 'string' ? json.email : null,
-      planType: typeof json?.plan_type === 'string' ? json.plan_type : null,
-      usedPercent: typeof primary?.used_percent === 'number' ? primary.used_percent : null,
-      limitWindowSeconds:
-        typeof primary?.limit_window_seconds === 'number' ? primary.limit_window_seconds : null,
-      resetAt:
-        typeof primary?.reset_at === 'number'
-          ? new Date(primary.reset_at * 1000).toISOString()
-          : null,
-      creditsBalance:
-        json?.credits?.balance != null && !Number.isNaN(Number(json.credits.balance))
-          ? Number(json.credits.balance)
-          : null,
-      limitReached: rl?.limit_reached === true,
-    }
+    const data = parseCodexUsage(json)
     usageCache = { at: Date.now(), data }
     return data
   } catch (err) {
