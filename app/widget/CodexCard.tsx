@@ -1,8 +1,8 @@
 "use client";
 
-import { resetFmt } from "@/lib/ranking";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
+import { ResetTicker } from "./CountdownText";
 import UsageBar from "./UsageBar";
 import type { CodexUsage } from "./types";
 
@@ -12,7 +12,6 @@ export default function CodexCard({
   light,
   showProviderNames,
   displayNames,
-  now,
   onDragStart,
 }: {
   codex: CodexUsage | null;
@@ -21,7 +20,6 @@ export default function CodexCard({
   cardBg?: string;
   showProviderNames: boolean;
   displayNames: Record<string, string>;
-  now: number;
   onDragStart: (e: React.MouseEvent) => void;
 }) {
   if (!codexEnabled) return null;
@@ -56,11 +54,11 @@ export default function CodexCard({
               reset={null}
             />
           </div>
-          {codex.resetAt && (
-            <div className={`${WIDGET_TYPE_SCALE.caption} mt-1 transition-colors duration-700 text-role-muted`}>
-              Resets {resetFmt(codex.resetAt, now)}
-            </div>
-          )}
+          <ResetTicker
+            iso={codex.resetAt}
+            prefix="Resets "
+            className={`${WIDGET_TYPE_SCALE.caption} mt-1 transition-colors duration-700 text-role-muted`}
+          />
         </>
       ) : (
         <div className={`${WIDGET_TYPE_SCALE.body} text-role-muted`}>not signed in or unavailable</div>

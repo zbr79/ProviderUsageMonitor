@@ -1,9 +1,9 @@
 "use client";
 
-import type { PeakInfo } from "@/lib/ranking";
-import { fmtDuration, isExhausted, isExhaustedWindow, resetFmt } from "@/lib/ranking";
+import { isExhausted, isExhaustedWindow } from "@/lib/ranking";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
+import { PeakHourBadge } from "./CountdownText";
 import UsageBar from "./UsageBar";
 import type { AccountRow } from "./types";
 
@@ -15,8 +15,6 @@ export default function OpenCodeCard({
   showProviderNames,
   displayNames,
   deepseekPeakHourWarning,
-  peakInfo,
-  now,
   increaseAt,
   onDragStart,
   onCopyKey,
@@ -29,8 +27,6 @@ export default function OpenCodeCard({
   showProviderNames: boolean;
   displayNames: Record<string, string>;
   deepseekPeakHourWarning: boolean;
-  peakInfo: PeakInfo;
-  now: number;
   increaseAt: Map<string, number>;
   onDragStart: (e: React.MouseEvent) => void;
   onCopyKey: (email: string) => void;
@@ -41,10 +37,6 @@ export default function OpenCodeCard({
   const labelText = showProviderNames
     ? "OpenCode"
     : displayNames[row.email] ?? row.email.slice(0, 4);
-  const showInc = (win: string) => {
-    const at = increaseAt.get(`${row.email}:${win}`);
-    return !!at && now - at < 20_000;
-  };
 
   return (
     <CardShell state={state} light={light}>
@@ -69,15 +61,7 @@ export default function OpenCodeCard({
         ) : disabled ? (
           <span className="sr-only">Disabled</span>
         ) : null}
-        {deepseekPeakHourWarning && withControls && peakInfo.active && peakInfo.endAt ? (
-          <span className={`${WIDGET_TYPE_SCALE.caption} font-medium whitespace-nowrap text-role-danger`}>
-            Peak Ends in {fmtDuration(peakInfo.endAt - now)}
-          </span>
-        ) : deepseekPeakHourWarning && withControls && peakInfo.nextStartAt ? (
-          <span className={`${WIDGET_TYPE_SCALE.caption} font-medium whitespace-nowrap text-role-success`}>
-            Peak Starts in {fmtDuration(peakInfo.nextStartAt - now)}
-          </span>
-        ) : null}
+        <PeakHourBadge enabled={Boolean(deepseekPeakHourWarning && withControls)} />
         <span
           className={`ml-auto ${WIDGET_TYPE_SCALE.caption} font-semibold px-1.5 py-0.5 rounded-full border role-badge-blue`}
         >
@@ -96,22 +80,22 @@ export default function OpenCodeCard({
               isExhaustedWindow(row.usage.weekly) ||
               isExhaustedWindow(row.usage.monthly)
             }
-            increased={showInc("rolling")}
-            reset={withControls ? resetFmt(row.usage.rolling.resetsAt, now) : null}
+            increaseAtMs={increaseAt.get(`${row.email}:rolling`)}
+            resetIso={withControls ? row.usage.rolling.resetsAt : null}
           />
           <UsageBar
             label="W"
             w={row.usage.weekly}
             dimmed={exhausted || isExhaustedWindow(row.usage.monthly)}
-            increased={showInc("weekly")}
-            reset={withControls ? resetFmt(row.usage.weekly.resetsAt, now) : null}
+            increaseAtMs={increaseAt.get(`${row.email}:weekly`)}
+            resetIso={withControls ? row.usage.weekly.resetsAt : null}
           />
           <UsageBar
             label="M"
             w={row.usage.monthly}
             dimmed={exhausted}
-            increased={showInc("monthly")}
-            reset={resetFmt(row.usage.monthly.resetsAt, now)}
+            increaseAtMs={increaseAt.get(`${row.email}:monthly`)}
+            resetIso={row.usage.monthly.resetsAt}
           />
         </div>
       ) : null}

@@ -1,6 +1,8 @@
 "use client";
 
+import { resetFmt } from "@/lib/ranking";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
+import { useNowSecond, useRecentIncrease } from "./CountdownText";
 import type { UsageWindow } from "./types";
 
 function windowColor(w: UsageWindow): string {
@@ -20,26 +22,24 @@ const EXPANDED_LABEL: Record<string, string> = {
   M: "Monthly window",
 };
 
-export default function UsageBar({
+function UsageBarMeter({
   label,
-  title,
+  fullLabel,
   w,
   dimmed,
   increased,
-  reset,
+  resetText,
 }: {
   label: string;
-  title?: string;
+  fullLabel: string;
   w: UsageWindow;
   dimmed: boolean;
   increased: boolean;
-  light?: boolean;
-  reset: string | null;
+  resetText: string | null;
 }) {
-  const fullLabel = title ?? EXPANDED_LABEL[label] ?? label;
   const pctNum = Math.min(Math.max(Math.round(w.percent * 10) / 10, 0), 100);
   const pctStr = fmtPct(w.percent);
-  const valueText = reset ? `${pctStr} percent, resets in ${reset}` : `${pctStr} percent`;
+  const valueText = resetText ? `${pctStr} percent, resets in ${resetText}` : `${pctStr} percent`;
 
   return (
     <div
@@ -80,13 +80,91 @@ export default function UsageBar({
           style={{ width: `${Math.min(w.percent, 100)}%` }}
         />
       </div>
-      {reset && (
+      {resetText && (
         <div
           className={`${WIDGET_TYPE_SCALE.caption} mt-0.5 transition-colors duration-700 text-role-muted`}
         >
-          {reset}
+          {resetText}
         </div>
       )}
     </div>
+  );
+}
+
+function LiveResetUsageBar({
+  label,
+  fullLabel,
+  w,
+  dimmed,
+  increased,
+  resetIso,
+}: {
+  label: string;
+  fullLabel: string;
+  w: UsageWindow;
+  dimmed: boolean;
+  increased: boolean;
+  resetIso: string;
+}) {
+  const now = useNowSecond();
+  const resetText = resetFmt(resetIso, now);
+  return (
+    <UsageBarMeter
+      label={label}
+      fullLabel={fullLabel}
+      w={w}
+      dimmed={dimmed}
+      increased={increased}
+      resetText={resetText}
+    />
+  );
+}
+
+export default function UsageBar({
+  label,
+  title,
+  w,
+  dimmed,
+  increased,
+  increaseAtMs,
+  reset,
+  resetIso,
+}: {
+  label: string;
+  title?: string;
+  w: UsageWindow;
+  dimmed: boolean;
+  increased?: boolean;
+  increaseAtMs?: number;
+  light?: boolean;
+  reset?: string | null;
+  resetIso?: string | null;
+}) {
+  const fullLabel = title ?? EXPANDED_LABEL[label] ?? label;
+  const recentFromTimestamp = useRecentIncrease(increaseAtMs);
+  const showIncreased = increased ?? recentFromTimestamp;
+
+  if (resetIso) {
+    return (
+      <LiveResetUsageBar
+        label={label}
+        fullLabel={fullLabel}
+        w={w}
+        dimmed={dimmed}
+        increased={showIncreased}
+        resetIso={resetIso}
+      />
+    );
+  }
+
+  return (
+    <UsageBarMeter
+      label={label}
+      fullLabel={fullLabel}
+      w={w}
+      dimmed={dimmed}
+      increased={showIncreased}
+      resetText={reset ?? null}
+    />
   );
 }

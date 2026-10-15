@@ -4,7 +4,6 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { toastError, toastSuccess } from "@/app/components/toast/toast";
 import { apiFetch } from "@/lib/api-fetch";
 import { usageWidget } from "@/lib/desktop-bridge";
-import { getPeakInfo } from "@/lib/ranking";
 import {
   resolveWidgetThemeName,
   themeStyleVars,
@@ -42,7 +41,6 @@ export default function Widget() {
     reload,
   } = useWidgetData();
 
-  const [now, setNow] = useState(() => Date.now());
   const [expanded, setExpanded] = useState(false);
   const [bgBright, setBgBright] = useState<number | null>(null);
 
@@ -129,11 +127,6 @@ export default function Widget() {
   const themeVars = themeStyleVars(WIDGET_THEMES[widgetThemeName]) as CSSProperties;
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
     const t = setTimeout(() => {
       const h = document.body?.scrollHeight ?? 0;
       if (h > 0) usageWidget()?.resize?.(238, h + 6);
@@ -160,7 +153,6 @@ export default function Widget() {
     }
   };
 
-  const peakInfo = getPeakInfo(new Date(now));
   const showOffline = failedPolls >= 2 || serverState !== "online";
   const offlineLabel =
     serverState === "stopped"
@@ -177,8 +169,6 @@ export default function Widget() {
       showProviderNames={showProviderNames}
       displayNames={displayNames}
       deepseekPeakHourWarning={deepseekPeakHourWarning}
-      peakInfo={peakInfo}
-      now={now}
       increaseAt={increaseAt}
       onDragStart={onDragStart}
       onCopyKey={copyKey}
@@ -194,7 +184,6 @@ export default function Widget() {
         light={light}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
-        now={now}
         onDragStart={onDragStart}
       />
       <GrokCard
@@ -203,7 +192,6 @@ export default function Widget() {
         light={light}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
-        now={now}
         onDragStart={onDragStart}
       />
       <CodexCard
@@ -212,7 +200,6 @@ export default function Widget() {
         light={light}
         showProviderNames={showProviderNames}
         displayNames={displayNames}
-        now={now}
         onDragStart={onDragStart}
       />
       <ClaudeCard

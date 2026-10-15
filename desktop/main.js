@@ -409,7 +409,7 @@ function startBgSampler() {
       }
       if (mode === "auto") {
         try {
-          if (win && !win.isDestroyed()) {
+          if (win && !win.isDestroyed() && !win.isMinimized() && win.isVisible()) {
             const display = screen.getPrimaryDisplay();
             const sources = await desktopCapturer.getSources({
               types: ["screen"],

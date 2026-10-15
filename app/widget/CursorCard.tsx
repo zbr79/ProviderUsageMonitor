@@ -1,8 +1,8 @@
 "use client";
 
-import { resetFmt } from "@/lib/ranking";
 import { WIDGET_TYPE_SCALE } from "@/lib/theme";
 import CardShell from "./CardShell";
+import { ResetTicker } from "./CountdownText";
 import UsageBar from "./UsageBar";
 import type { CursorUsage } from "./types";
 
@@ -13,7 +13,6 @@ export default function CursorCard({
   light,
   showProviderNames,
   displayNames,
-  now,
   onDragStart,
 }: {
   cursor: CursorUsage | null;
@@ -23,7 +22,6 @@ export default function CursorCard({
   cardBg?: string;
   showProviderNames: boolean;
   displayNames: Record<string, string>;
-  now: number;
   onDragStart: (e: React.MouseEvent) => void;
 }) {
   if (!cursorEnabled) return null;
@@ -79,11 +77,11 @@ export default function CursorCard({
           reset={null}
         />
       </div>
-      {cursor.billingCycleEnd && (
-        <div className={`${WIDGET_TYPE_SCALE.caption} mt-1 transition-colors duration-700 text-role-muted`}>
-          Resets {resetFmt(cursor.billingCycleEnd, now)}
-        </div>
-      )}
+      <ResetTicker
+        iso={cursor.billingCycleEnd}
+        prefix="Resets "
+        className={`${WIDGET_TYPE_SCALE.caption} mt-1 transition-colors duration-700 text-role-muted`}
+      />
     </CardShell>
   );
 }
